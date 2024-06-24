@@ -95,6 +95,7 @@ One of the following structs will be returned:
 - `FileStore.DownloadError`
 - `FileStore.CopyError`
 - `FileStore.RenameError`
+- `FileStore.PutAccessControlListError`
 
 Because the error implements the `Exception` behaviour, you can `raise` it.
 

@@ -127,6 +127,8 @@ defmodule FileStore.Adapters.Disk do
            do: File.rename(src, dest)
     end
 
+    def put_access_control_list(_store, _key, _acl), do: :ok
+
     def upload(store, source, key) do
       with {:ok, dest} <- expand(store, key),
            {:ok, _} <- File.copy(source, dest),

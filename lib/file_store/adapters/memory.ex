@@ -154,6 +154,8 @@ defmodule FileStore.Adapters.Memory do
       end)
     end
 
+    def put_access_control_list(_store, _key, _acl), do: :ok
+
     def upload(store, source, key) do
       with {:ok, data} <- File.read(source) do
         write(store, key, data)

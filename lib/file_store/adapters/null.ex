@@ -49,6 +49,7 @@ defmodule FileStore.Adapters.Null do
     def read(_store, _key), do: {:ok, ""}
     def copy(_store, _src, _dest), do: :ok
     def rename(_store, _src, _dest), do: :ok
+    def put_access_control_list(_store, _key, _acl), do: :ok
     def list!(_store, _opts), do: Stream.into([], [])
   end
 end

@@ -9,6 +9,7 @@ defmodule FileStore.Middleware.Errors do
     * `FileStore.DownloadError`
     * `FileStore.CopyError`
     * `FileStore.RenameError`
+    * `FileStore.PutAccessControlListError`
 
   Each of these structs contain `reason` field, where you'll find the original
   error that was returned by the underlying adapter.
@@ -39,6 +40,7 @@ defmodule FileStore.Middleware.Errors do
     alias FileStore.DownloadError
     alias FileStore.RenameError
     alias FileStore.CopyError
+    alias FileStore.PutAccessControlListError
 
     def stat(store, key) do
       store.__next__
@@ -68,6 +70,12 @@ defmodule FileStore.Middleware.Errors do
       store.__next__
       |> FileStore.rename(src, dest)
       |> wrap(RenameError, src: src, dest: dest)
+    end
+
+    def put_access_control_list(store, key, acl) do
+      store.__next__
+      |> FileStore.put_access_control_list(key, acl)
+      |> wrap(PutAccessControlListError, key: key, acl: acl)
     end
 
     def upload(store, path, key) do

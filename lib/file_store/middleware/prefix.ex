@@ -54,6 +54,10 @@ defmodule FileStore.Middleware.Prefix do
       FileStore.rename(store.__next__, put_prefix(src, store), put_prefix(dest, store))
     end
 
+    def put_access_control_list(store, key, acl) do
+      FileStore.put_access_control_list(store.__next__, put_prefix(key, store), acl)
+    end
+
     def upload(store, source, key) do
       FileStore.upload(store.__next__, source, put_prefix(key, store))
     end

@@ -45,6 +45,12 @@ defmodule FileStore.Middleware.Logger do
       |> log("RENAME", src: src, dest: dest)
     end
 
+    def put_access_control_list(store, key, acl) do
+      store.__next__
+      |> FileStore.put_access_control_list(key, acl)
+      |> log("PUT_ACCESS_CONTROL_LIST", key: key, acl: acl)
+    end
+
     def upload(store, source, key) do
       store.__next__
       |> FileStore.upload(source, key)

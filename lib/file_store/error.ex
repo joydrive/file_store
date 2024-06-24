@@ -52,6 +52,16 @@ defmodule FileStore.CopyError do
   end
 end
 
+defmodule FileStore.PutAccessControlListError do
+  defexception [:key, :acl]
+
+  @impl true
+  def message(%{reason: reason, key: key, acl: acl}) do
+    reason = FileStore.Error.format(reason)
+    "could not set the access control list of #{inspect(key)} to #{inspect(acl)}: #{reason}"
+  end
+end
+
 defmodule FileStore.RenameError do
   defexception [:reason, :src, :dest]
 

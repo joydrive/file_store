@@ -169,6 +169,12 @@ if Code.ensure_loaded?(ExAws.S3) do
         end
       end
 
+      def put_access_control_list(store, key, acl) do
+        store.bucket
+        |> ExAws.S3.put_object_acl(key, acl)
+        |> acknowledge(store)
+      end
+
       defp request(op, store) do
         ExAws.request(op, store.ex_aws)
       end

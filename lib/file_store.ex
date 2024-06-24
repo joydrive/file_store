@@ -19,6 +19,8 @@ defprotocol FileStore do
   @type key :: binary()
   @type list_opts :: [{:prefix, binary()}]
   @type delete_all_opts :: [{:prefix, binary()}]
+  @type acl_list :: [term()]
+
   @type write_opts :: [
           {:content_type, binary()}
           | {:disposition, binary()}
@@ -213,4 +215,9 @@ defprotocol FileStore do
   """
   @spec list!(t, list_opts) :: Enumerable.t()
   def list!(store, opts \\ [])
+
+  @doc """
+  """
+  @spec put_access_control_list(t, key(), acl_list()) :: :ok | {:error, term}
+  def put_access_control_list(store, key, acl)
 end
