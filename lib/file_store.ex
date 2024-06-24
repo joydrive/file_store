@@ -219,6 +219,8 @@ defprotocol FileStore do
   @doc """
   Set the access control list (ACL) for a file in the store. This is only implemented for S3.
 
+  See https://hexdocs.pm/ex_aws_s3/ExAws.S3.html#t:acl_opt/0 for the format of the ACL list.
+
   ## Examples
 
       iex> FileStore.put_access_control_list("foo", [{:acl, :public_read}])
