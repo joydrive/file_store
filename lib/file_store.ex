@@ -217,6 +217,16 @@ defprotocol FileStore do
   def list!(store, opts \\ [])
 
   @doc """
+  Set the access control list (ACL) for a file in the store. This is only implemented for S3.
+
+  ## Examples
+
+      iex> FileStore.put_access_control_list("foo", [{:acl, :public_read}])
+      :ok
+
+      iex> FileStore.put_access_control_list("foo", [{:grant_read, email: "foo@example.com"}])
+      :ok
+
   """
   @spec put_access_control_list(t, key(), acl_list()) :: :ok | {:error, term}
   def put_access_control_list(store, key, acl)
