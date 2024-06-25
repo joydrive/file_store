@@ -102,7 +102,7 @@ defmodule FileStore.Config do
         FileStore.rename(new(), src, dest)
       end
 
-      @spec put_access_control_list(FileStore.key(), String.t()) :: :ok | {:error, term()}
+      @spec put_access_control_list(FileStore.key(), FileStore.acl_list()) :: :ok | {:error, term()}
       def put_access_control_list(key, acl) do
         FileStore.put_access_control_list(new(), key, acl)
       end
