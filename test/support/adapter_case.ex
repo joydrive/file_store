@@ -208,6 +208,14 @@ defmodule FileStore.AdapterCase do
           assert {:ok, _} = FileStore.stat(store, "bar")
         end
       end
+
+      describe "put_access_control_list/4 conformance" do
+        test "updates the access control list on the object", %{store: store} do
+          :ok = FileStore.write(store, "foo", "test")
+
+          assert :ok = FileStore.put_access_control_list(store, "foo", [{:acl, :private}])
+        end
+      end
     end
   end
 
