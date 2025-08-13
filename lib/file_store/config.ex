@@ -102,7 +102,8 @@ defmodule FileStore.Config do
         FileStore.rename(new(), src, dest)
       end
 
-      @spec put_access_control_list(FileStore.key(), String.t()) :: :ok | {:error, term()}
+      @spec put_access_control_list(FileStore.key(), FileStore.acl_list()) ::
+              :ok | {:error, term()}
       def put_access_control_list(key, acl) do
         FileStore.put_access_control_list(new(), key, acl)
       end
@@ -130,6 +131,14 @@ defmodule FileStore.Config do
       @spec list! :: Enumerable.t()
       def list!(opts \\ []) do
         FileStore.list!(new(), opts)
+      end
+
+      def set_tags(key, tags) do
+        FileStore.set_tags(new(), key, tags)
+      end
+
+      def get_tags(key) do
+        FileStore.get_tags(new(), key)
       end
     end
   end

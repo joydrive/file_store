@@ -70,6 +70,16 @@ defmodule FileStore.Adapters.S3Test do
     end
   end
 
+  describe "set_tags/3" do
+    test "adds tags to the object", %{store: store} do
+      :ok = FileStore.write(store, "key", "test")
+
+      assert :ok = FileStore.set_tags(store, "key", [{"tag", "value"}])
+
+      assert {:ok, %{"tag" => "value"}} = FileStore.get_tags(store, "key")
+    end
+  end
+
   defp prepare_bucket! do
     @bucket
     |> ExAws.S3.put_bucket(@region)

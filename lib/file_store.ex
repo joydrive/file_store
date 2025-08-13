@@ -232,4 +232,7 @@ defprotocol FileStore do
   """
   @spec put_access_control_list(t, key(), acl_list()) :: :ok | {:error, term}
   def put_access_control_list(store, key, acl)
+
+  def set_tags(store, key, tags)
+  def get_tags(store, key)
 end

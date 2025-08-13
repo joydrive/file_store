@@ -175,6 +175,32 @@ if Code.ensure_loaded?(ExAws.S3) do
         |> acknowledge(store)
       end
 
+      def set_tags(store, key, tags) do
+        store.bucket
+        |> ExAws.S3.put_object_tagging(key, tags)
+        |> acknowledge(store)
+      end
+
+      def get_tags(store, key) do
+        store.bucket
+        |> ExAws.S3.get_object_tagging(key)
+        |> request(store)
+        |> case do
+          {:ok, %{body: %{tags: tags}}} ->
+            tags =
+              tags
+              |> Enum.map(fn %{key: key, value: value} ->
+                {key, value}
+              end)
+              |> Enum.into(%{})
+
+            {:ok, tags}
+
+          {:error, reason} ->
+            {:error, reason}
+        end
+      end
+
       defp request(op, store) do
         ExAws.request(op, store.ex_aws)
       end

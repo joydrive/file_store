@@ -51,6 +51,14 @@ defmodule FileStore.Middleware.Logger do
       |> log("PUT_ACCESS_CONTROL_LIST", key: key, acl: acl)
     end
 
+    def set_tags(store, key, tags) do
+      FileStore.set_tags(store.__next__, key, tags)
+    end
+
+    def get_tags(store, key) do
+      FileStore.get_tags(store.__next__, key)
+    end
+
     def upload(store, source, key) do
       store.__next__
       |> FileStore.upload(source, key)
