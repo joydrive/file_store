@@ -129,6 +129,9 @@ defmodule FileStore.Adapters.Disk do
 
     def put_access_control_list(_store, _key, _acl), do: :ok
 
+    def set_tags(_store, _key, _tags), do: :ok
+    def get_tags(_store, _key), do: []
+
     def upload(store, source, key) do
       with {:ok, dest} <- expand(store, key),
            {:ok, _} <- File.copy(source, dest),

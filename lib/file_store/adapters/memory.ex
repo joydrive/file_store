@@ -45,6 +45,11 @@ defmodule FileStore.Adapters.Memory do
   @enforce_keys [:base_url]
   defstruct [:base_url, name: __MODULE__]
 
+  defmodule Object do
+    @moduledoc false
+    defstruct [:content, tags: %{}]
+  end
+
   @doc "Creates a new memory adapter"
   @spec new(keyword) :: FileStore.t()
   def new(opts) do
@@ -88,13 +93,13 @@ defmodule FileStore.Adapters.Memory do
       store.name
       |> Agent.get(&Map.fetch(&1, key))
       |> case do
-        {:ok, data} ->
+        {:ok, %Object{content: content}} ->
           {
             :ok,
             %Stat{
               key: key,
-              size: byte_size(data),
-              etag: Stat.checksum(data),
+              size: byte_size(content),
+              etag: Stat.checksum(content),
               type: "application/octet-stream"
             }
           }
@@ -119,13 +124,14 @@ defmodule FileStore.Adapters.Memory do
     end
 
     def write(store, key, content, _opts \\ []) do
-      Agent.update(store.name, &Map.put(&1, key, content))
+      Agent.update(store.name, &Map.put(&1, key, %Object{content: content}))
     end
 
     def read(store, key) do
       Agent.get(store.name, fn state ->
-        with :error <- Map.fetch(state, key) do
-          {:error, :enoent}
+        case Map.fetch(state, key) do
+          {:ok, %Object{content: content}} -> {:ok, content}
+          :error -> {:error, :enoent}
         end
       end)
     end
@@ -155,6 +161,31 @@ defmodule FileStore.Adapters.Memory do
     end
 
     def put_access_control_list(_store, _key, _acl), do: :ok
+
+    def set_tags(store, key, tags) do
+      Agent.get_and_update(store.name, fn state ->
+        case Map.fetch(state, key) do
+          {:ok, %Object{content: content, tags: _old_tags}} ->
+            updated_object = %Object{content: content, tags: tags}
+            {:ok, Map.put(state, key, updated_object)}
+
+          :error ->
+            {{:error, :enoent}, state}
+        end
+      end)
+    end
+
+    def get_tags(store, key) do
+      Agent.get(store.name, fn state ->
+        case Map.fetch(state, key) do
+          {:ok, %Object{tags: tags}} ->
+            {:ok, tags}
+
+          :error ->
+            {:error, :enoent}
+        end
+      end)
+    end
 
     def upload(store, source, key) do
       with {:ok, data} <- File.read(source) do

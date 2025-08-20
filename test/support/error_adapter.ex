@@ -18,6 +18,8 @@ defmodule FileStore.Adapters.Error do
     def copy(_store, _src, _dest), do: {:error, :boom}
     def rename(_store, _src, _dest), do: {:error, :boom}
     def put_access_control_list(_store, _key, _acl), do: {:error, :boom}
+    def set_tags(_store, _key, _tags), do: {:error, :boom}
+    def get_tags(_store, _key), do: {:error, :boom}
     def get_public_url(_store, key, _opts \\ []), do: key
     def get_signed_url(_store, _key, _opts \\ []), do: {:error, :boom}
     def list!(_store, _opts \\ []), do: []

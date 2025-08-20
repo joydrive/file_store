@@ -41,6 +41,8 @@ defmodule FileStore.Middleware.Errors do
     alias FileStore.RenameError
     alias FileStore.CopyError
     alias FileStore.PutAccessControlListError
+    alias FileStore.SetTagsError
+    alias FileStore.GetTagsError
 
     def stat(store, key) do
       store.__next__
@@ -76,6 +78,18 @@ defmodule FileStore.Middleware.Errors do
       store.__next__
       |> FileStore.put_access_control_list(key, acl)
       |> wrap(PutAccessControlListError, key: key, acl: acl)
+    end
+
+    def set_tags(store, key, tags) do
+      store.__next__
+      |> FileStore.set_tags(key, tags)
+      |> wrap(SetTagsError)
+    end
+
+    def get_tags(store, key) do
+      store.__next__
+      |> FileStore.get_tags(key)
+      |> wrap(GetTagsError)
     end
 
     def upload(store, path, key) do

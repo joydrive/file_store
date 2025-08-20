@@ -58,6 +58,14 @@ defmodule FileStore.Middleware.Prefix do
       FileStore.put_access_control_list(store.__next__, put_prefix(key, store), acl)
     end
 
+    def set_tags(store, key, tags) do
+      FileStore.set_tags(store.__next__, put_prefix(key, store), tags)
+    end
+
+    def get_tags(store, key) do
+      FileStore.get_tags(store.__next__, put_prefix(key, store))
+    end
+
     def upload(store, source, key) do
       FileStore.upload(store.__next__, source, put_prefix(key, store))
     end

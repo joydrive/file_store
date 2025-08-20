@@ -71,3 +71,23 @@ defmodule FileStore.RenameError do
     "could not rename #{inspect(src)} to #{inspect(dest)}: #{reason}"
   end
 end
+
+defmodule FileStore.SetTagsError do
+  defexception [:reason, :key, :tags]
+
+  @impl true
+  def message(%{reason: reason, key: key, tags: tags}) do
+    reason = FileStore.Error.format(reason)
+    "could not set tags #{inspect(tags)} for key #{inspect(key)}: #{reason}"
+  end
+end
+
+defmodule FileStore.GetTagsError do
+  defexception [:reason, :key]
+
+  @impl true
+  def message(%{reason: reason, key: key}) do
+    reason = FileStore.Error.format(reason)
+    "could not get tags for key #{inspect(key)}: #{reason}"
+  end
+end

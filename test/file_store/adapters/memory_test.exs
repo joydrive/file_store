@@ -25,4 +25,12 @@ defmodule FileStore.Adapters.MemoryTest do
     assert get_query(url, "content_type") == "text/plain"
     assert get_query(url, "disposition") == "attachment"
   end
+
+  test "set_tags/3 and get_tags/2", %{store: store} do
+    tags = %{"tag1" => "value1", "tag2" => "value2"}
+
+    assert :ok = FileStore.write(store, "foo", "content")
+    assert :ok = FileStore.set_tags(store, "foo", tags)
+    assert {:ok, ^tags} = FileStore.get_tags(store, "foo")
+  end
 end
