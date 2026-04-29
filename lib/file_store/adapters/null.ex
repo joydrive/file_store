@@ -51,7 +51,7 @@ defmodule FileStore.Adapters.Null do
     def rename(_store, _src, _dest), do: :ok
     def put_access_control_list(_store, _key, _acl), do: :ok
     def set_tags(_store, _key, _tags), do: :ok
-    def get_tags(_store, _key), do: []
+    def get_tags(_store, _key), do: {:ok, []}
     def list!(_store, _opts), do: Stream.into([], [])
   end
 end
