@@ -70,6 +70,17 @@ defmodule FileStore.Adapters.S3Test do
     end
   end
 
+  describe "delete_all/1" do
+    test "returns :ok when bucket is empty", %{store: store} do
+      assert :ok = FileStore.delete_all(store)
+    end
+
+    test "returns :ok when prefix matches no keys", %{store: store} do
+      assert :ok = FileStore.write(store, "foo", "bar")
+      assert :ok = FileStore.delete_all(store, prefix: "non-existent")
+    end
+  end
+
   describe "set_tags/3" do
     test "adds tags to the object", %{store: store} do
       :ok = FileStore.write(store, "key", "test")
