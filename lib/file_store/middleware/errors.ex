@@ -10,6 +10,8 @@ defmodule FileStore.Middleware.Errors do
     * `FileStore.CopyError`
     * `FileStore.RenameError`
     * `FileStore.PutAccessControlListError`
+    * `FileStore.SetTagsError`
+    * `FileStore.GetTagsError`
 
   Each of these structs contain `reason` field, where you'll find the original
   error that was returned by the underlying adapter.
@@ -83,13 +85,13 @@ defmodule FileStore.Middleware.Errors do
     def set_tags(store, key, tags) do
       store.__next__
       |> FileStore.set_tags(key, tags)
-      |> wrap(SetTagsError)
+      |> wrap(SetTagsError, key: key, tags: tags)
     end
 
     def get_tags(store, key) do
       store.__next__
       |> FileStore.get_tags(key)
-      |> wrap(GetTagsError)
+      |> wrap(GetTagsError, key: key)
     end
 
     def upload(store, path, key) do

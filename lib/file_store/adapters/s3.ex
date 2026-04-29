@@ -105,9 +105,15 @@ if Code.ensure_loaded?(ExAws.S3) do
       end
 
       def delete_all(store, opts) do
-        store.bucket
-        |> ExAws.S3.delete_all_objects(list!(store, opts))
-        |> acknowledge(store)
+        keys = list!(store, opts)
+
+        if Enum.any?(keys) do
+          store.bucket
+          |> ExAws.S3.delete_all_objects(keys)
+          |> acknowledge(store)
+        else
+          :ok
+        end
       rescue
         error -> {:error, error}
       end

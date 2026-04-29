@@ -126,5 +126,24 @@ defmodule FileStore.Middleware.ErrorsTest do
 
       assert {:error, ^error} = FileStore.get_signed_url(store, "key")
     end
+
+    test "set_tags/3", %{store: store} do
+      error = %FileStore.SetTagsError{
+        key: "key",
+        tags: [{"tag", "value"}],
+        reason: :boom
+      }
+
+      assert {:error, ^error} = FileStore.set_tags(store, "key", [{"tag", "value"}])
+    end
+
+    test "get_tags/2", %{store: store} do
+      error = %FileStore.GetTagsError{
+        key: "key",
+        reason: :boom
+      }
+
+      assert {:error, ^error} = FileStore.get_tags(store, "key")
+    end
   end
 end
