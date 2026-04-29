@@ -129,14 +129,41 @@ defmodule FileStore.Adapters.Disk do
 
     def put_access_control_list(_store, _key, _acl), do: :ok
 
-    def set_tags(store, key, _tags) do
+    def set_tags(store, key, tags) do
       path = Disk.join(store, key)
-      if File.exists?(path), do: :ok, else: {:error, :enoent}
+
+      if File.exists?(path) do
+        tags_path = tags_path(store, key)
+        tags_dir = Path.dirname(tags_path)
+
+        with :ok <- File.mkdir_p(tags_dir) do
+          File.write(tags_path, Jason.encode!(Enum.map(tags, &Tuple.to_list/1)))
+        end
+      else
+        {:error, :enoent}
+      end
     end
 
     def get_tags(store, key) do
       path = Disk.join(store, key)
-      if File.exists?(path), do: {:ok, []}, else: {:error, :enoent}
+
+      if File.exists?(path) do
+        tags_path = tags_path(store, key)
+
+        case File.read(tags_path) do
+          {:ok, data} ->
+            tags = data |> Jason.decode!() |> Enum.map(fn [k, v] -> {k, v} end)
+            {:ok, tags}
+
+          {:error, :enoent} ->
+            {:ok, []}
+
+          {:error, reason} ->
+            {:error, reason}
+        end
+      else
+        {:error, :enoent}
+      end
     end
 
     def upload(store, source, key) do
@@ -153,13 +180,19 @@ defmodule FileStore.Adapters.Disk do
 
     def list!(store, opts) do
       prefix = Keyword.get(opts, :prefix, "")
+      tags_dir = Path.join(store.storage_path, ".file_store_tags")
 
       store.storage_path
       |> Path.join(prefix)
       |> Path.join("**/*")
       |> Path.wildcard(match_dot: true)
       |> Stream.reject(&File.dir?/1)
+      |> Stream.reject(&String.starts_with?(&1, tags_dir))
       |> Stream.map(&Path.relative_to(&1, store.storage_path))
+    end
+
+    defp tags_path(store, key) do
+      Path.join([store.storage_path, ".file_store_tags", key <> ".json"])
     end
 
     defp expand(store, key) do

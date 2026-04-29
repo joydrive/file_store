@@ -87,7 +87,7 @@ defmodule FileStore.Adapters.S3Test do
 
       assert :ok = FileStore.set_tags(store, "key", [{"tag", "value"}])
 
-      assert {:ok, %{"tag" => "value"}} = FileStore.get_tags(store, "key")
+      assert {:ok, [{"tag", "value"}]} = FileStore.get_tags(store, "key")
     end
   end
 

@@ -216,6 +216,27 @@ defmodule FileStore.AdapterCase do
           assert :ok = FileStore.put_access_control_list(store, "foo", [{:acl, :private}])
         end
       end
+
+      describe "set_tags/3 and get_tags/2 conformance" do
+        test "sets and retrieves tags", %{store: store} do
+          tags = [{"env", "prod"}, {"team", "platform"}]
+          assert :ok = FileStore.write(store, "foo", "bar")
+          assert :ok = FileStore.set_tags(store, "foo", tags)
+          assert {:ok, ^tags} = FileStore.get_tags(store, "foo")
+        end
+
+        test "returns empty tags when none set", %{store: store} do
+          assert :ok = FileStore.write(store, "foo", "bar")
+          assert {:ok, []} = FileStore.get_tags(store, "foo")
+        end
+
+        test "tags not included in list!", %{store: store} do
+          assert :ok = FileStore.write(store, "foo", "bar")
+          assert :ok = FileStore.set_tags(store, "foo", [{"k", "v"}])
+          keys = Enum.to_list(FileStore.list!(store))
+          assert keys == ["foo"]
+        end
+      end
     end
   end
 

@@ -194,11 +194,9 @@ if Code.ensure_loaded?(ExAws.S3) do
         |> case do
           {:ok, %{body: %{tags: tags}}} ->
             tags =
-              tags
-              |> Enum.map(fn %{key: key, value: value} ->
+              Enum.map(tags, fn %{key: key, value: value} ->
                 {key, value}
               end)
-              |> Enum.into(%{})
 
             {:ok, tags}
 

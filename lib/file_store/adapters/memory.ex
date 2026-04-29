@@ -47,7 +47,7 @@ defmodule FileStore.Adapters.Memory do
 
   defmodule Object do
     @moduledoc false
-    defstruct [:content, tags: %{}]
+    defstruct [:content, tags: []]
   end
 
   @doc "Creates a new memory adapter"
