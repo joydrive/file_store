@@ -147,7 +147,7 @@ defmodule FileStore.Adapters.Disk do
       with {:ok, src_path} <- expand(store, src),
            {:ok, dest_path} <- expand(store, dest),
            :ok <- File.rename(src_path, dest_path),
-           :ok = rename_tags(store, src, dest),
+           :ok <- rename_tags(store, src, dest),
            do: :ok
     end
 
