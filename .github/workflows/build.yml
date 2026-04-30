@@ -9,9 +9,9 @@ jobs:
       MIX_ENV: dev
     strategy:
       matrix:
-        os: ["ubuntu-20.04"]
-        elixir: ["1.16"]
-        otp: ["26"]
+        os: ["ubuntu-24.04"]
+        elixir: ["1.19.2"]
+        otp: ["28.1.1"]
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -61,9 +61,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ["ubuntu-20.04"]
-        elixir: ["1.16", "1.15", "1.14"]
-        otp: ["26", "25", "24"]
+        os: ["ubuntu-24.04"]
+        elixir: ["1.19.2", "1.18.4", "1.17.3"]
+        otp: ["28.1.1", "27.3.4"]
+        exclude:
+          - elixir: "1.17.3"
+            otp: "28.1.1"
     steps:
       - name: Checkout
         uses: actions/checkout@v2
