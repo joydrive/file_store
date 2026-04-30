@@ -71,6 +71,15 @@ defmodule FileStore.Adapters.DiskTest do
       refute File.exists?(Path.join([tmp, ".file_store_tags", "foo.json"]))
     end
 
+    test "delete_all/2 does not delete tag file of unrelated key when prefix matches .json name",
+         %{store: store, tmp: tmp} do
+      assert :ok = FileStore.write(store, "foo", "content")
+      assert :ok = FileStore.set_tags(store, "foo", [{"k", "v"}])
+      assert :ok = FileStore.write(store, "foo.json", "content")
+      assert :ok = FileStore.delete_all(store, prefix: "foo.json")
+      assert File.exists?(Path.join([tmp, ".file_store_tags", "foo.json"]))
+    end
+
     test "delete_all/2 with no prefix removes all tag files", %{store: store, tmp: tmp} do
       assert :ok = FileStore.write(store, "foo", "")
       assert :ok = FileStore.set_tags(store, "foo", [{"k", "v"}])

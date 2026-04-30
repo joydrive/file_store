@@ -100,11 +100,12 @@ defmodule FileStore.Adapters.Disk do
 
     def delete_all(store, opts) do
       prefix = Keyword.get(opts, :prefix, "")
+      tags_subtree = Path.join([store.storage_path, store.tags_dir, prefix])
 
       with {:ok, _} <- store.storage_path |> Path.join(prefix) |> File.rm_rf(),
-           {:ok, _} <- Path.join([store.storage_path, store.tags_dir, prefix]) |> File.rm_rf(),
            {:ok, _} <-
-             Path.join([store.storage_path, store.tags_dir, prefix <> ".json"]) |> File.rm_rf() do
+             (if File.dir?(tags_subtree), do: File.rm_rf(tags_subtree), else: {:ok, []}),
+           {:ok, _} <- File.rm_rf(tags_subtree <> ".json") do
         :ok
       else
         {:error, reason, _file} -> {:error, reason}
