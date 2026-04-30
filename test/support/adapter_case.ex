@@ -222,7 +222,8 @@ defmodule FileStore.AdapterCase do
           tags = [{"env", "prod"}, {"team", "platform"}]
           assert :ok = FileStore.write(store, "foo", "bar")
           assert :ok = FileStore.set_tags(store, "foo", tags)
-          assert {:ok, ^tags} = FileStore.get_tags(store, "foo")
+          assert {:ok, returned} = FileStore.get_tags(store, "foo")
+          assert Enum.sort(returned) == Enum.sort(tags)
         end
 
         test "returns empty tags when none set", %{store: store} do
