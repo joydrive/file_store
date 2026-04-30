@@ -15,7 +15,7 @@ defmodule FileStore.MixProject do
       package: package(),
       test_coverage: [tool: ExCoveralls],
       dialyzer: [
-        plt_add_apps: [:ex_aws, :ex_aws_s3],
+        plt_add_apps: [:ex_aws, :ex_aws_s3, :telemetry, :opentelemetry_api],
         plt_file: {:no_warn, "priv/plts/dialyzer.plt"}
       ],
       docs: docs()
@@ -46,6 +46,10 @@ defmodule FileStore.MixProject do
   defp deps do
     [
       {:ex_aws_s3, "~> 2.3", optional: true},
+      {:telemetry, "~> 1.0", optional: true},
+      {:opentelemetry_api, "~> 1.3", optional: true},
+      {:opentelemetry, "~> 1.3", only: :test},
+      {:opentelemetry_exporter, "~> 1.6", only: :test},
       {:hackney, ">= 0.0.0", only: [:dev, :test]},
       {:sweet_xml, ">= 0.0.0", only: [:dev, :test]},
       {:jason, ">= 0.0.0"},
