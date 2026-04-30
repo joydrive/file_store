@@ -10,6 +10,9 @@ defmodule FileStore.Adapters.Disk do
     * `base_url` - The base URL that should be used for
        generating URLs to your files.
 
+    * `tags_dir` - The directory name (relative to `storage_path`) used
+      to store tag files. Defaults to `".file_store_tags"`.
+
   ### Example
 
       iex> store = FileStore.Adapters.Disk.new(
@@ -27,7 +30,7 @@ defmodule FileStore.Adapters.Disk do
   """
 
   @enforce_keys [:storage_path, :base_url]
-  defstruct [:storage_path, :base_url]
+  defstruct [:storage_path, :base_url, tags_dir: ".file_store_tags"]
 
   @doc "Create a new disk adapter"
   @spec new(keyword) :: FileStore.t()
@@ -86,26 +89,30 @@ defmodule FileStore.Adapters.Disk do
 
     def delete(store, key) do
       case File.rm(Disk.join(store, key)) do
-        :ok -> :ok
-        {:error, reason} when reason in [:enoent, :enotdir] -> :ok
-        {:error, reason} -> {:error, reason}
+        {:error, reason} when reason not in [:enoent, :enotdir] ->
+          {:error, reason}
+
+        _ ->
+          _ = File.rm(tags_path(store, key))
+          :ok
       end
     end
 
     def delete_all(store, opts) do
       prefix = Keyword.get(opts, :prefix, "")
 
-      store.storage_path
-      |> Path.join(prefix)
-      |> File.rm_rf()
-      |> case do
-        {:ok, _} -> :ok
+      with {:ok, _} <- store.storage_path |> Path.join(prefix) |> File.rm_rf(),
+           {:ok, _} <-
+             Path.join([store.storage_path, store.tags_dir, prefix]) |> File.rm_rf() do
+        :ok
+      else
         {:error, reason, _file} -> {:error, reason}
       end
     end
 
     def write(store, key, content, _opts \\ []) do
       with {:ok, path} <- expand(store, key) do
+        _ = File.rm(tags_path(store, key))
         File.write(path, content)
       end
     end
@@ -115,16 +122,38 @@ defmodule FileStore.Adapters.Disk do
     end
 
     def copy(store, src, dest) do
-      with {:ok, src} <- expand(store, src),
-           {:ok, dest} <- expand(store, dest),
-           {:ok, _} <- File.copy(src, dest),
-           do: :ok
+      with {:ok, src_path} <- expand(store, src),
+           {:ok, dest_path} <- expand(store, dest),
+           {:ok, _} <- File.copy(src_path, dest_path) do
+        src_tags = tags_path(store, src)
+        dest_tags = tags_path(store, dest)
+
+        if File.exists?(src_tags) do
+          with :ok <- File.mkdir_p(Path.dirname(dest_tags)),
+               {:ok, _} <- File.copy(src_tags, dest_tags),
+               do: :ok
+        else
+          _ = File.rm(dest_tags)
+          :ok
+        end
+      end
     end
 
     def rename(store, src, dest) do
-      with {:ok, src} <- expand(store, src),
-           {:ok, dest} <- expand(store, dest),
-           do: File.rename(src, dest)
+      with {:ok, src_path} <- expand(store, src),
+           {:ok, dest_path} <- expand(store, dest),
+           :ok <- File.rename(src_path, dest_path) do
+        src_tags = tags_path(store, src)
+        dest_tags = tags_path(store, dest)
+
+        if File.exists?(src_tags) do
+          with :ok <- File.mkdir_p(Path.dirname(dest_tags)),
+               do: File.rename(src_tags, dest_tags)
+        else
+          _ = File.rm(dest_tags)
+          :ok
+        end
+      end
     end
 
     def put_access_control_list(_store, _key, _acl), do: :ok
@@ -180,7 +209,7 @@ defmodule FileStore.Adapters.Disk do
 
     def list!(store, opts) do
       prefix = Keyword.get(opts, :prefix, "")
-      tags_dir = Path.join(store.storage_path, ".file_store_tags")
+      tags_dir = Path.join(store.storage_path, store.tags_dir)
 
       store.storage_path
       |> Path.join(prefix)
@@ -192,7 +221,7 @@ defmodule FileStore.Adapters.Disk do
     end
 
     defp tags_path(store, key) do
-      Path.join([store.storage_path, ".file_store_tags", key <> ".json"])
+      Path.join([store.storage_path, store.tags_dir, key <> ".json"])
     end
 
     defp expand(store, key) do
