@@ -126,8 +126,7 @@ defmodule FileStore.Adapters.Disk do
       with {:ok, src_path} <- expand(store, src),
            {:ok, dest_path} <- expand(store, dest),
            {:ok, _} <- File.copy(src_path, dest_path),
-           :ok <- copy_tags(store, src, dest),
-           do: :ok
+           do: copy_tags(store, src, dest)
     end
 
     defp copy_tags(store, src, dest) do
@@ -148,8 +147,7 @@ defmodule FileStore.Adapters.Disk do
       with {:ok, src_path} <- expand(store, src),
            {:ok, dest_path} <- expand(store, dest),
            :ok <- File.rename(src_path, dest_path),
-           :ok <- rename_tags(store, src, dest),
-           do: :ok
+           do: rename_tags(store, src, dest)
     end
 
     defp rename_tags(store, src, dest) do
