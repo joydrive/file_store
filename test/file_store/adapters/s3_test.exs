@@ -23,6 +23,23 @@ defmodule FileStore.Adapters.S3Test do
     {:ok, store: S3.new(bucket: @bucket, ex_aws: @config)}
   end
 
+  test "new/1 raises when bucket is missing" do
+    assert_raise RuntimeError, "missing configuration: :bucket", fn ->
+      S3.new([])
+    end
+  end
+
+  test "get_public_url/3 without port" do
+    config = Keyword.put(@config, :port, nil)
+    store = S3.new(bucket: @bucket, ex_aws: config)
+    assert FileStore.get_public_url(store, "foo") == "http://filestore.localhost/foo"
+  end
+
+  test "delete_all/2 returns error when bucket does not exist" do
+    store = S3.new(bucket: "does-not-exist-bucket", ex_aws: @config)
+    assert {:error, _} = FileStore.delete_all(store)
+  end
+
   test "get_public_url/3", %{store: store} do
     assert FileStore.get_public_url(store, "foo") == @url
   end
@@ -88,6 +105,29 @@ defmodule FileStore.Adapters.S3Test do
       assert :ok = FileStore.set_tags(store, "key", [{"tag", "value"}])
 
       assert {:ok, [{"tag", "value"}]} = FileStore.get_tags(store, "key")
+    end
+  end
+
+  describe "get_tags/2" do
+    test "returns error when key does not exist", %{store: store} do
+      assert {:error, %FileStore.NotFound{operation: :get_tags}} =
+               FileStore.get_tags(store, "nonexistent-key")
+    end
+  end
+
+  describe "stat/2 with missing headers" do
+    test "handles nil ETag and Content-Length", %{store: _store} do
+      config = Keyword.put(@config, :http_client, __MODULE__.NullHTTP)
+      store = S3.new(bucket: @bucket, ex_aws: config)
+      assert {:ok, stat} = FileStore.stat(store, "any-key")
+      assert is_nil(stat.etag)
+      assert is_nil(stat.size)
+    end
+  end
+
+  defmodule NullHTTP do
+    def request(_method, _url, _body, _headers, _opts) do
+      {:ok, %{status_code: 200, headers: [], body: ""}}
     end
   end
 

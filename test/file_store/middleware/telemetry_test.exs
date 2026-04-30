@@ -140,4 +140,58 @@ defmodule FileStore.Middleware.TelemetryTest do
     assert meta.src == "old"
     assert meta.dest == "new"
   end
+
+  test "new/1 accepts keyword list for metadata" do
+    store = Memory.new(@config) |> Telemetry.new(metadata: [tenant: "acme"])
+    assert :ok = FileStore.write(store, "x", "y")
+    assert_receive {:telemetry, [:file_store, :write, :start], _, meta}
+    assert meta.tenant == "acme"
+  end
+
+  describe "error stop events" do
+    setup do
+      error_store = FileStore.Adapters.Error.new() |> Telemetry.new()
+      {:ok, error_store: error_store}
+    end
+
+    test "write emits error result", %{error_store: store} do
+      assert {:error, _} = FileStore.write(store, "k", "v")
+      assert_receive {:telemetry, [:file_store, :write, :stop], _, %{result: :error}}
+    end
+
+    test "download emits error result", %{error_store: store, tmp: tmp} do
+      assert {:error, _} = FileStore.download(store, "k", Path.join(tmp, "d"))
+      assert_receive {:telemetry, [:file_store, :download, :stop], _, %{result: :error}}
+    end
+
+    test "delete emits error result", %{error_store: store} do
+      assert {:error, _} = FileStore.delete(store, "k")
+      assert_receive {:telemetry, [:file_store, :delete, :stop], _, %{result: :error}}
+    end
+
+    test "delete_all emits error result", %{error_store: store} do
+      assert {:error, _} = FileStore.delete_all(store)
+      assert_receive {:telemetry, [:file_store, :delete_all, :stop], _, %{result: :error}}
+    end
+
+    test "get_signed_url emits error result", %{error_store: store} do
+      assert {:error, _} = FileStore.get_signed_url(store, "k")
+      assert_receive {:telemetry, [:file_store, :get_signed_url, :stop], _, %{result: :error}}
+    end
+
+    test "put_access_control_list emits error result", %{error_store: store} do
+      assert {:error, _} = FileStore.put_access_control_list(store, "k", :public_read)
+      assert_receive {:telemetry, [:file_store, :put_access_control_list, :stop], _, %{result: :error}}
+    end
+
+    test "set_tags emits error result", %{error_store: store} do
+      assert {:error, _} = FileStore.set_tags(store, "k", [])
+      assert_receive {:telemetry, [:file_store, :set_tags, :stop], _, %{result: :error}}
+    end
+
+    test "get_tags emits error result", %{error_store: store} do
+      assert {:error, _} = FileStore.get_tags(store, "k")
+      assert_receive {:telemetry, [:file_store, :get_tags, :stop], _, %{result: :error}}
+    end
+  end
 end

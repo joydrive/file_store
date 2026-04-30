@@ -9,6 +9,43 @@ defmodule FileStore.Adapters.DiskTest do
     {:ok, store: Disk.new(storage_path: tmp, base_url: "http://localhost:4000")}
   end
 
+  test "new/1 raises when storage_path is missing" do
+    assert_raise RuntimeError, "missing configuration: :storage_path", fn ->
+      Disk.new([])
+    end
+  end
+
+  test "new/1 raises when base_url is missing", %{tmp: tmp} do
+    assert_raise RuntimeError, "missing configuration: :base_url", fn ->
+      Disk.new(storage_path: tmp)
+    end
+  end
+
+  test "delete/2 returns error when key is a directory", %{store: store, tmp: tmp} do
+    File.mkdir_p!(Path.join(tmp, "mydir"))
+    assert {:error, _} = FileStore.delete(store, "mydir")
+  end
+
+  test "delete_all/2 returns error when storage is not writable", %{tmp: tmp} do
+    protected = Path.join(tmp, "protected")
+    File.mkdir_p!(protected)
+    File.write!(Path.join(protected, "file"), "data")
+    File.chmod!(protected, 0o555)
+    on_exit(fn -> File.chmod!(protected, 0o755) end)
+    store = Disk.new(storage_path: protected, base_url: "http://localhost:4000")
+    assert {:error, _} = FileStore.delete_all(store)
+  end
+
+  test "write/4 returns error when parent path is a file", %{store: store, tmp: tmp} do
+    File.write!(Path.join(tmp, "conflict"), "data")
+    assert {:error, _} = FileStore.write(store, "conflict/child", "data")
+  end
+
+  test "download/3 returns error when parent path is a file", %{store: store, tmp: tmp} do
+    File.write!(Path.join(tmp, "conflict"), "data")
+    assert {:error, _} = FileStore.download(store, "conflict/child", Path.join(tmp, "out"))
+  end
+
   test "get_public_url/3 with query params", %{store: store} do
     opts = [content_type: "text/plain", disposition: "attachment"]
     url = FileStore.get_public_url(store, "foo", opts)
@@ -147,6 +184,16 @@ defmodule FileStore.Adapters.DiskTest do
     test "rename/2 does not move implicit parent directory subtree", %{store: store} do
       FileStore.rename(store, "foo", "bar")
       assert {:ok, "data"} = FileStore.read(store, "foo/bar")
+    end
+  end
+
+  describe "get_tags/2 error cases" do
+    test "returns error when tags path is a directory", %{store: store, tmp: tmp} do
+      assert :ok = FileStore.write(store, "foo", "data")
+      tags_path = Path.join([tmp, ".file_store_tags", "foo.json"])
+      File.rm(tags_path)
+      File.mkdir_p!(tags_path)
+      assert {:error, _} = FileStore.get_tags(store, "foo")
     end
   end
 

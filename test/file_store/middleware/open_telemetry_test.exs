@@ -111,6 +111,73 @@ defmodule FileStore.Middleware.OpenTelemetryTest do
     refute_receive {:span, _}, 100
   end
 
+  test "new/1 accepts keyword list for attributes" do
+    store = Memory.new(@config) |> OpenTelemetry.new(attributes: [my_attr: "val"])
+    :otel_simple_processor.set_exporter(:otel_exporter_pid, self())
+    assert :ok = FileStore.write(store, "x", "y")
+    assert_receive {:span, span}
+    assert span(span, :name) == "FileStore.write"
+    assert attrs_map(span)[:my_attr] == "val"
+  end
+
+  describe "error spans" do
+    setup do
+      error_reason = %FileStore.Error{reason: :boom}
+      error_store = FileStore.Adapters.Error.new(reason: error_reason) |> OpenTelemetry.new()
+      :otel_simple_processor.set_exporter(:otel_exporter_pid, self())
+      {:ok, error_store: error_store}
+    end
+
+    test "write sets error status on failure", %{error_store: store} do
+      assert {:error, _} = FileStore.write(store, "k", "v")
+      assert_receive {:span, span}
+      assert {_, :error, _} = span(span, :status)
+      assert attrs_map(span)["file_store.error_type"] == "FileStore.Error"
+    end
+
+    test "download sets error status on failure", %{error_store: store, tmp: tmp} do
+      assert {:error, _} = FileStore.download(store, "k", Path.join(tmp, "d"))
+      assert_receive {:span, span}
+      assert {_, :error, _} = span(span, :status)
+    end
+
+    test "delete sets error status on failure", %{error_store: store} do
+      assert {:error, _} = FileStore.delete(store, "k")
+      assert_receive {:span, span}
+      assert {_, :error, _} = span(span, :status)
+    end
+
+    test "delete_all sets error status on failure", %{error_store: store} do
+      assert {:error, _} = FileStore.delete_all(store)
+      assert_receive {:span, span}
+      assert {_, :error, _} = span(span, :status)
+    end
+
+    test "get_signed_url sets error status on failure", %{error_store: store} do
+      assert {:error, _} = FileStore.get_signed_url(store, "k")
+      assert_receive {:span, span}
+      assert {_, :error, _} = span(span, :status)
+    end
+
+    test "put_access_control_list sets error status on failure", %{error_store: store} do
+      assert {:error, _} = FileStore.put_access_control_list(store, "k", :public_read)
+      assert_receive {:span, span}
+      assert {_, :error, _} = span(span, :status)
+    end
+
+    test "set_tags sets error status on failure", %{error_store: store} do
+      assert {:error, _} = FileStore.set_tags(store, "k", [])
+      assert_receive {:span, span}
+      assert {_, :error, _} = span(span, :status)
+    end
+
+    test "get_tags sets error status on failure", %{error_store: store} do
+      assert {:error, _} = FileStore.get_tags(store, "k")
+      assert_receive {:span, span}
+      assert {_, :error, _} = span(span, :status)
+    end
+  end
+
   defp attrs_map(span) do
     span
     |> span(:attributes)

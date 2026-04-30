@@ -69,9 +69,18 @@ defmodule FileStore.ErrorTest do
     end
 
     test "formats HTTP errors" do
-      assert Message.format_reason({:http_error, 404, ""}) == "HTTP 404 Not Found"
+      assert Message.format_reason({:http_error, 400, ""}) == "HTTP 400 Bad Request"
+      assert Message.format_reason({:http_error, 401, ""}) == "HTTP 401 Unauthorized"
       assert Message.format_reason({:http_error, 403, ""}) == "HTTP 403 Forbidden"
+      assert Message.format_reason({:http_error, 404, ""}) == "HTTP 404 Not Found"
+      assert Message.format_reason({:http_error, 409, ""}) == "HTTP 409 Conflict"
+      assert Message.format_reason({:http_error, 410, ""}) == "HTTP 410 Gone"
+      assert Message.format_reason({:http_error, 412, ""}) == "HTTP 412 Precondition Failed"
+      assert Message.format_reason({:http_error, 416, ""}) == "HTTP 416 Range Not Satisfiable"
+      assert Message.format_reason({:http_error, 422, ""}) == "HTTP 422 Unprocessable Entity"
+      assert Message.format_reason({:http_error, 429, ""}) == "HTTP 429 Too Many Requests"
       assert Message.format_reason({:http_error, 503, ""}) == "HTTP 503 Server Error"
+      assert Message.format_reason({:http_error, 418, ""}) =~ "HTTP 418"
     end
 
     test "formats File.Error via posix reason" do
@@ -126,6 +135,16 @@ defmodule FileStore.ErrorTest do
     test "get_signed_url" do
       error = %FileStore.Error{operation: :get_signed_url, key: "k", reason: :enoent}
       assert Exception.message(error) =~ "generate signed URL"
+    end
+
+    test "delete" do
+      error = %FileStore.Error{operation: :delete, key: "foo", reason: :enoent}
+      assert Exception.message(error) =~ ~s|delete key "foo"|
+    end
+
+    test "put_access_control_list" do
+      error = %FileStore.Error{operation: :put_access_control_list, key: "foo", acl: :public_read, reason: :enoent}
+      assert Exception.message(error) =~ "access control list"
     end
   end
 end
