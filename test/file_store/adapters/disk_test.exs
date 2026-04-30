@@ -121,6 +121,32 @@ defmodule FileStore.Adapters.DiskTest do
     end
   end
 
+  describe "implicit parent directory keys" do
+    setup %{store: store} do
+      # Writing "foo/bar" causes File.mkdir_p to create /storage/foo/ as a side-effect.
+      # "foo" is then a directory entry but was never written as a key.
+      assert :ok = FileStore.write(store, "foo/bar", "data")
+      :ok
+    end
+
+    test "set_tags/3 returns enoent for implicit parent directory", %{store: store} do
+      assert {:error, :enoent} = FileStore.set_tags(store, "foo", [{"k", "v"}])
+    end
+
+    test "get_tags/2 returns enoent for implicit parent directory", %{store: store} do
+      assert {:error, :enoent} = FileStore.get_tags(store, "foo")
+    end
+
+    test "rename/2 returns enoent for implicit parent directory", %{store: store} do
+      assert {:error, :enoent} = FileStore.rename(store, "foo", "bar")
+    end
+
+    test "rename/2 does not move implicit parent directory subtree", %{store: store} do
+      FileStore.rename(store, "foo", "bar")
+      assert {:ok, "data"} = FileStore.read(store, "foo/bar")
+    end
+  end
+
   describe "get_tags/2 with corrupt tag files" do
     test "returns error on invalid JSON", %{store: store, tmp: tmp} do
       assert :ok = FileStore.write(store, "foo", "data")

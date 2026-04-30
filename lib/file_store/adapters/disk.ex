@@ -145,10 +145,15 @@ defmodule FileStore.Adapters.Disk do
     end
 
     def rename(store, src, dest) do
-      with {:ok, src_path} <- expand(store, src),
-           {:ok, dest_path} <- expand(store, dest),
-           :ok <- File.rename(src_path, dest_path),
-           do: rename_tags(store, src, dest)
+      src_path = Disk.join(store, src)
+
+      if File.regular?(src_path) do
+        with {:ok, dest_path} <- expand(store, dest),
+             :ok <- File.rename(src_path, dest_path),
+             do: rename_tags(store, src, dest)
+      else
+        {:error, :enoent}
+      end
     end
 
     defp rename_tags(store, src, dest) do
