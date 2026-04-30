@@ -143,7 +143,13 @@ defmodule FileStore.ErrorTest do
     end
 
     test "put_access_control_list" do
-      error = %FileStore.Error{operation: :put_access_control_list, key: "foo", acl: :public_read, reason: :enoent}
+      error = %FileStore.Error{
+        operation: :put_access_control_list,
+        key: "foo",
+        acl: :public_read,
+        reason: :enoent
+      }
+
       assert Exception.message(error) =~ "access control list"
     end
   end

@@ -181,7 +181,9 @@ defmodule FileStore.Middleware.TelemetryTest do
 
     test "put_access_control_list emits error result", %{error_store: store} do
       assert {:error, _} = FileStore.put_access_control_list(store, "k", :public_read)
-      assert_receive {:telemetry, [:file_store, :put_access_control_list, :stop], _, %{result: :error}}
+
+      assert_receive {:telemetry, [:file_store, :put_access_control_list, :stop], _,
+                      %{result: :error}}
     end
 
     test "set_tags emits error result", %{error_store: store} do
