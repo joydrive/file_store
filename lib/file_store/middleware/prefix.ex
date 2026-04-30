@@ -25,7 +25,7 @@ defmodule FileStore.Middleware.Prefix do
     alias FileStore.Utils
 
     def stat(store, key) do
-      with {:ok, stat} <- FileStore.stat(store.__next__, put_prefix(key, store)) do
+      with {:ok, %Stat{} = stat} <- FileStore.stat(store.__next__, put_prefix(key, store)) do
         {:ok, %Stat{stat | key: remove_prefix(stat.key, store)}}
       end
     end
