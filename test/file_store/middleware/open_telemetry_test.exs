@@ -21,7 +21,7 @@ defmodule FileStore.Middleware.OpenTelemetryTest do
     assert :ok = FileStore.write(store, "foo", "bar")
 
     assert_receive {:span, span}
-    assert span(span, :name) == "file_store.write"
+    assert span(span, :name) == "FileStore.write"
     assert span(span, :kind) == :client
   end
 
@@ -39,7 +39,7 @@ defmodule FileStore.Middleware.OpenTelemetryTest do
     assert {:error, _} = FileStore.read(store, "missing")
 
     assert_receive {:span, span}
-    assert span(span, :name) == "file_store.read"
+    assert span(span, :name) == "FileStore.read"
     assert {_, :error, _} = span(span, :status)
     attrs = attrs_map(span)
     assert attrs["file_store.error_type"] == "FileStore.NotFound"
@@ -52,7 +52,7 @@ defmodule FileStore.Middleware.OpenTelemetryTest do
 
     assert {:ok, _} = FileStore.stat(store, "foo")
     assert_receive {:span, span}
-    assert span(span, :name) == "file_store.stat"
+    assert span(span, :name) == "FileStore.stat"
   end
 
   test "copy span includes src and dest attributes", %{store: store} do
@@ -61,7 +61,7 @@ defmodule FileStore.Middleware.OpenTelemetryTest do
 
     assert :ok = FileStore.copy(store, "src", "dst")
     assert_receive {:span, span}
-    assert span(span, :name) == "file_store.copy"
+    assert span(span, :name) == "FileStore.copy"
     attrs = attrs_map(span)
     assert attrs["file_store.src"] == "src"
     assert attrs["file_store.dest"] == "dst"
@@ -73,7 +73,7 @@ defmodule FileStore.Middleware.OpenTelemetryTest do
 
     assert :ok = FileStore.rename(store, "old", "new")
     assert_receive {:span, span}
-    assert span(span, :name) == "file_store.rename"
+    assert span(span, :name) == "FileStore.rename"
     attrs = attrs_map(span)
     assert attrs["file_store.src"] == "old"
     assert attrs["file_store.dest"] == "new"
