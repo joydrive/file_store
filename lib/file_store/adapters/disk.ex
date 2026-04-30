@@ -102,8 +102,9 @@ defmodule FileStore.Adapters.Disk do
       prefix = Keyword.get(opts, :prefix, "")
 
       with {:ok, _} <- store.storage_path |> Path.join(prefix) |> File.rm_rf(),
+           {:ok, _} <- Path.join([store.storage_path, store.tags_dir, prefix]) |> File.rm_rf(),
            {:ok, _} <-
-             Path.join([store.storage_path, store.tags_dir, prefix]) |> File.rm_rf() do
+             Path.join([store.storage_path, store.tags_dir, prefix <> ".json"]) |> File.rm_rf() do
         :ok
       else
         {:error, reason, _file} -> {:error, reason}
