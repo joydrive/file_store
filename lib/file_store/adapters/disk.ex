@@ -169,7 +169,7 @@ defmodule FileStore.Adapters.Disk do
     def set_tags(store, key, tags) do
       path = Disk.join(store, key)
 
-      if File.exists?(path) do
+      if File.regular?(path) do
         tags_path = tags_path(store, key)
         tags_dir = Path.dirname(tags_path)
 
@@ -184,7 +184,7 @@ defmodule FileStore.Adapters.Disk do
     def get_tags(store, key) do
       path = Disk.join(store, key)
 
-      if File.exists?(path) do
+      if File.regular?(path) do
         case File.read(tags_path(store, key)) do
           {:ok, data} -> decode_tags(data)
           {:error, :enoent} -> {:ok, []}
