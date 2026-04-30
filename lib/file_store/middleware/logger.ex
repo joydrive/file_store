@@ -125,9 +125,5 @@ defmodule FileStore.Middleware.Logger do
     defp format_error(%{__exception__: true} = error) do
       [?\n, Exception.format(:error, error)]
     end
-
-    defp format_error(error) do
-      [" error=", inspect(error)]
-    end
   end
 end

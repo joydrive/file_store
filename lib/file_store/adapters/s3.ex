@@ -60,15 +60,13 @@ if Code.ensure_loaded?(ExAws.S3) do
         query = Utils.encode_query(get_url_query(opts))
         scheme = String.trim_trailing(config[:scheme], "://")
 
-        uri = %URI{
-          scheme: scheme,
-          host: host,
-          port: config[:port],
-          path: "/" <> key,
-          query: query
-        }
+        base =
+          case config[:port] do
+            nil -> URI.parse("#{scheme}://#{host}")
+            port -> URI.parse("#{scheme}://#{host}:#{port}")
+          end
 
-        URI.to_string(uri)
+        URI.to_string(%URI{base | path: "/" <> key, query: query})
       end
 
       def get_signed_url(store, key, opts) do
