@@ -157,7 +157,8 @@ defmodule FileStore.Adapters.DiskTest do
       File.mkdir_p!(Path.dirname(tags_path))
       File.write!(tags_path, "not json")
 
-      assert {:error, %FileStore.InvalidArgument{operation: :get_tags, key: "foo", reason: :invalid_tags}} =
+      assert {:error,
+              %FileStore.InvalidArgument{operation: :get_tags, key: "foo", reason: :invalid_tags}} =
                FileStore.get_tags(store, "foo")
     end
 
@@ -167,7 +168,8 @@ defmodule FileStore.Adapters.DiskTest do
       File.mkdir_p!(Path.dirname(tags_path))
       File.write!(tags_path, ~s({"k": "v"}))
 
-      assert {:error, %FileStore.InvalidArgument{operation: :get_tags, key: "foo", reason: :invalid_tags}} =
+      assert {:error,
+              %FileStore.InvalidArgument{operation: :get_tags, key: "foo", reason: :invalid_tags}} =
                FileStore.get_tags(store, "foo")
     end
 
@@ -177,7 +179,8 @@ defmodule FileStore.Adapters.DiskTest do
       File.mkdir_p!(Path.dirname(tags_path))
       File.write!(tags_path, ~s([["k", 123]]))
 
-      assert {:error, %FileStore.InvalidArgument{operation: :get_tags, key: "foo", reason: :invalid_tags}} =
+      assert {:error,
+              %FileStore.InvalidArgument{operation: :get_tags, key: "foo", reason: :invalid_tags}} =
                FileStore.get_tags(store, "foo")
     end
   end

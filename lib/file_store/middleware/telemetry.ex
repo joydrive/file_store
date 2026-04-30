@@ -77,7 +77,13 @@ defmodule FileStore.Middleware.Telemetry do
 
   defimpl FileStore do
     def write(store, key, content, opts) do
-      meta = build_meta(store, %{operation: :write, key: key, opts: opts, content_size: byte_size(content)})
+      meta =
+        build_meta(store, %{
+          operation: :write,
+          key: key,
+          opts: opts,
+          content_size: byte_size(content)
+        })
 
       :telemetry.span(store.event_prefix ++ [:write], meta, fn ->
         case FileStore.write(store.__next__, key, content, opts) do

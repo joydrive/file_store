@@ -27,8 +27,7 @@ defmodule FileStore.Middleware.TelemetryTest do
     store = Memory.new(@config) |> Telemetry.new()
 
     events =
-      for op <- @ops, evt <- [:start, :stop, :exception],
-          do: [:file_store, op, evt]
+      for op <- @ops, evt <- [:start, :stop, :exception], do: [:file_store, op, evt]
 
     pid = self()
     handler_id = "test-telemetry-#{inspect(pid)}"
@@ -36,7 +35,9 @@ defmodule FileStore.Middleware.TelemetryTest do
     :telemetry.attach_many(
       handler_id,
       events,
-      fn name, measurements, metadata, _ -> send(pid, {:telemetry, name, measurements, metadata}) end,
+      fn name, measurements, metadata, _ ->
+        send(pid, {:telemetry, name, measurements, metadata})
+      end,
       %{}
     )
 

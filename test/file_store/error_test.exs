@@ -11,7 +11,9 @@ defmodule FileStore.ErrorTest do
 
     test "message for copy" do
       error = %FileStore.NotFound{operation: :copy, src: "src", dest: "dest", reason: :enoent}
-      assert Exception.message(error) == ~s|could not copy "src" to "dest": no such file or directory|
+
+      assert Exception.message(error) ==
+               ~s|could not copy "src" to "dest": no such file or directory|
     end
   end
 
@@ -111,7 +113,13 @@ defmodule FileStore.ErrorTest do
     end
 
     test "set_tags" do
-      error = %FileStore.NotFound{operation: :set_tags, key: "k", tags: [{"a", "b"}], reason: :enoent}
+      error = %FileStore.NotFound{
+        operation: :set_tags,
+        key: "k",
+        tags: [{"a", "b"}],
+        reason: :enoent
+      }
+
       assert Exception.message(error) =~ "set tags"
     end
 

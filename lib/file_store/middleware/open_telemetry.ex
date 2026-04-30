@@ -79,7 +79,9 @@ defmodule FileStore.Middleware.OpenTelemetry do
         })
 
         case FileStore.write(store.__next__, key, content, opts) do
-          :ok -> :ok
+          :ok ->
+            :ok
+
           {:error, err} = e ->
             set_error(err)
             e
@@ -92,7 +94,9 @@ defmodule FileStore.Middleware.OpenTelemetry do
         set_attrs(store, %{"code.function" => "read", "file_store.key" => key})
 
         case FileStore.read(store.__next__, key) do
-          {:ok, _} = ok -> ok
+          {:ok, _} = ok ->
+            ok
+
           {:error, err} = e ->
             set_error(err)
             e
@@ -105,7 +109,9 @@ defmodule FileStore.Middleware.OpenTelemetry do
         set_attrs(store, %{"code.function" => "upload", "file_store.key" => key})
 
         case FileStore.upload(store.__next__, source, key) do
-          :ok -> :ok
+          :ok ->
+            :ok
+
           {:error, err} = e ->
             set_error(err)
             e
@@ -118,7 +124,9 @@ defmodule FileStore.Middleware.OpenTelemetry do
         set_attrs(store, %{"code.function" => "download", "file_store.key" => key})
 
         case FileStore.download(store.__next__, key, destination) do
-          :ok -> :ok
+          :ok ->
+            :ok
+
           {:error, err} = e ->
             set_error(err)
             e
@@ -131,7 +139,9 @@ defmodule FileStore.Middleware.OpenTelemetry do
         set_attrs(store, %{"code.function" => "stat", "file_store.key" => key})
 
         case FileStore.stat(store.__next__, key) do
-          {:ok, _} = ok -> ok
+          {:ok, _} = ok ->
+            ok
+
           {:error, err} = e ->
             set_error(err)
             e
@@ -144,7 +154,9 @@ defmodule FileStore.Middleware.OpenTelemetry do
         set_attrs(store, %{"code.function" => "delete", "file_store.key" => key})
 
         case FileStore.delete(store.__next__, key) do
-          :ok -> :ok
+          :ok ->
+            :ok
+
           {:error, err} = e ->
             set_error(err)
             e
@@ -157,7 +169,9 @@ defmodule FileStore.Middleware.OpenTelemetry do
         set_attrs(store, %{"code.function" => "delete_all"})
 
         case FileStore.delete_all(store.__next__, opts) do
-          :ok -> :ok
+          :ok ->
+            :ok
+
           {:error, err} = e ->
             set_error(err)
             e
@@ -174,7 +188,9 @@ defmodule FileStore.Middleware.OpenTelemetry do
         })
 
         case FileStore.copy(store.__next__, src, dest) do
-          :ok -> :ok
+          :ok ->
+            :ok
+
           {:error, err} = e ->
             set_error(err)
             e
@@ -191,7 +207,9 @@ defmodule FileStore.Middleware.OpenTelemetry do
         })
 
         case FileStore.rename(store.__next__, src, dest) do
-          :ok -> :ok
+          :ok ->
+            :ok
+
           {:error, err} = e ->
             set_error(err)
             e
@@ -204,7 +222,9 @@ defmodule FileStore.Middleware.OpenTelemetry do
         set_attrs(store, %{"code.function" => "get_signed_url", "file_store.key" => key})
 
         case FileStore.get_signed_url(store.__next__, key, opts) do
-          {:ok, _} = ok -> ok
+          {:ok, _} = ok ->
+            ok
+
           {:error, err} = e ->
             set_error(err)
             e
@@ -220,7 +240,9 @@ defmodule FileStore.Middleware.OpenTelemetry do
         })
 
         case FileStore.put_access_control_list(store.__next__, key, acl) do
-          :ok -> :ok
+          :ok ->
+            :ok
+
           {:error, err} = e ->
             set_error(err)
             e
@@ -233,7 +255,9 @@ defmodule FileStore.Middleware.OpenTelemetry do
         set_attrs(store, %{"code.function" => "set_tags", "file_store.key" => key})
 
         case FileStore.set_tags(store.__next__, key, tags) do
-          :ok -> :ok
+          :ok ->
+            :ok
+
           {:error, err} = e ->
             set_error(err)
             e
@@ -246,7 +270,9 @@ defmodule FileStore.Middleware.OpenTelemetry do
         set_attrs(store, %{"code.function" => "get_tags", "file_store.key" => key})
 
         case FileStore.get_tags(store.__next__, key) do
-          {:ok, _} = ok -> ok
+          {:ok, _} = ok ->
+            ok
+
           {:error, err} = e ->
             set_error(err)
             e

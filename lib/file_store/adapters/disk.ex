@@ -106,7 +106,7 @@ defmodule FileStore.Adapters.Disk do
 
       with {:ok, _} <- store.storage_path |> Path.join(prefix) |> File.rm_rf(),
            {:ok, _} <-
-             (if File.dir?(tags_subtree), do: File.rm_rf(tags_subtree), else: {:ok, []}),
+             if(File.dir?(tags_subtree), do: File.rm_rf(tags_subtree), else: {:ok, []}),
            {:ok, _} <- File.rm_rf(tags_subtree <> ".json") do
         :ok
       else

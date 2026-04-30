@@ -1,7 +1,7 @@
 defmodule FileStore.Adapters.Error do
   @moduledoc false
 
-  defstruct [reason: :boom]
+  defstruct reason: :boom
 
   def new(opts \\ []) do
     struct(__MODULE__, opts)
