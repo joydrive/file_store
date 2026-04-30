@@ -5,7 +5,6 @@ defmodule FileStore.Middleware do
   The following middlewares ship with this library.
 
     * `FileStore.Middleware.Logger`
-    * `FileStore.Middleware.Errors`
     * `FileStore.Middleware.Prefix`
 
   To use a middleware, simply wrap your existing store with the middleware:
@@ -24,7 +23,6 @@ defmodule FileStore.Middleware do
   order is recommended:
 
       FileStore.Adapters.Null.new()
-      |> FileStore.Middleware.Errors.new()
       |> FileStore.Middleware.Prefix.new(prefix: "foo")
       |> FileStore.Middleware.Logger.new()
   """

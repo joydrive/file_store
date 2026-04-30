@@ -1,93 +1,78 @@
+defmodule FileStore.NotFound do
+  @moduledoc "Returned when the requested key does not exist in the store."
+
+  alias FileStore.Error.Message
+
+  defexception [:reason, :operation, :key, :src, :dest, :path, :tags, :acl]
+
+  @impl true
+  def message(e), do: Message.render(e)
+end
+
+defmodule FileStore.PermissionDenied do
+  @moduledoc "Returned when the caller lacks permission to perform the operation."
+
+  alias FileStore.Error.Message
+
+  defexception [:reason, :operation, :key, :src, :dest, :path, :tags, :acl]
+
+  @impl true
+  def message(e), do: Message.render(e)
+end
+
+defmodule FileStore.Conflict do
+  @moduledoc """
+  Returned when the operation conflicts with the current resource state.
+
+  Examples: writing to a path where a directory exists, copying to an
+  existing key that conflicts, S3 precondition failures.
+  """
+
+  alias FileStore.Error.Message
+
+  defexception [:reason, :operation, :key, :src, :dest, :path, :tags, :acl]
+
+  @impl true
+  def message(e), do: Message.render(e)
+end
+
+defmodule FileStore.InvalidArgument do
+  @moduledoc "Returned when the caller supplied an invalid or malformed argument."
+
+  alias FileStore.Error.Message
+
+  defexception [:reason, :operation, :key, :src, :dest, :path, :tags, :acl]
+
+  @impl true
+  def message(e), do: Message.render(e)
+end
+
+defmodule FileStore.Network do
+  @moduledoc """
+  Returned on transport or connectivity failures.
+
+  Pattern-matching on this struct is useful for implementing retry logic.
+  """
+
+  alias FileStore.Error.Message
+
+  defexception [:reason, :operation, :key, :src, :dest, :path, :tags, :acl]
+
+  @impl true
+  def message(e), do: Message.render(e)
+end
+
 defmodule FileStore.Error do
-  defexception [:reason, :key, :action]
+  @moduledoc """
+  Catch-all error returned when the failure cannot be classified into a
+  more specific category. Inspect the `:reason` field for the raw underlying
+  cause from the adapter.
+  """
 
-  @common_posix ~w(eacces eexist enoent enospc enotdir)a
+  alias FileStore.Error.Message
 
-  @impl true
-  def message(%{action: action, key: nil, reason: reason}) do
-    "could not #{action}: #{format(reason)}"
-  end
-
-  def message(%{action: action, reason: reason, key: key}) do
-    "could not #{action} #{inspect(key)}: #{format(reason)}"
-  end
-
-  @doc false
-  def format(reason) when reason in @common_posix do
-    reason |> :file.format_error() |> IO.iodata_to_binary()
-  end
-
-  def format(reason) do
-    inspect(reason)
-  end
-end
-
-defmodule FileStore.UploadError do
-  defexception [:reason, :path, :key]
+  defexception [:reason, :operation, :key, :src, :dest, :path, :tags, :acl]
 
   @impl true
-  def message(%{reason: reason, path: path, key: key}) do
-    reason = FileStore.Error.format(reason)
-    "could not upload file #{inspect(path)} to key #{inspect(key)}: #{reason}"
-  end
-end
-
-defmodule FileStore.DownloadError do
-  defexception [:reason, :path, :key]
-
-  @impl true
-  def message(%{reason: reason, path: path, key: key}) do
-    reason = FileStore.Error.format(reason)
-    "could not download key #{inspect(key)} to file #{inspect(path)}: #{reason}"
-  end
-end
-
-defmodule FileStore.CopyError do
-  defexception [:reason, :src, :dest]
-
-  @impl true
-  def message(%{reason: reason, src: src, dest: dest}) do
-    reason = FileStore.Error.format(reason)
-    "could not copy #{inspect(src)} to #{inspect(dest)}: #{reason}"
-  end
-end
-
-defmodule FileStore.PutAccessControlListError do
-  defexception [:key, :acl]
-
-  @impl true
-  def message(%{reason: reason, key: key, acl: acl}) do
-    reason = FileStore.Error.format(reason)
-    "could not set the access control list of #{inspect(key)} to #{inspect(acl)}: #{reason}"
-  end
-end
-
-defmodule FileStore.RenameError do
-  defexception [:reason, :src, :dest]
-
-  @impl true
-  def message(%{reason: reason, src: src, dest: dest}) do
-    reason = FileStore.Error.format(reason)
-    "could not rename #{inspect(src)} to #{inspect(dest)}: #{reason}"
-  end
-end
-
-defmodule FileStore.SetTagsError do
-  defexception [:reason, :key, :tags]
-
-  @impl true
-  def message(%{reason: reason, key: key, tags: tags}) do
-    reason = FileStore.Error.format(reason)
-    "could not set tags #{inspect(tags)} for key #{inspect(key)}: #{reason}"
-  end
-end
-
-defmodule FileStore.GetTagsError do
-  defexception [:reason, :key]
-
-  @impl true
-  def message(%{reason: reason, key: key}) do
-    reason = FileStore.Error.format(reason)
-    "could not get tags for key #{inspect(key)}: #{reason}"
-  end
+  def message(e), do: Message.render(e)
 end

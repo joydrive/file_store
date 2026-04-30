@@ -79,25 +79,42 @@ iex> store
 
 #### Errors
 
-The errors middleware will wrap error values:
+All adapters return a consistent error struct. Pattern-match on the category you care about:
 
 ```elixir
-iex> store
-...> |> FileStore.Middleware.Errors.new()
-...> |> FileStore.read("bizcorp.jpg")
-{:error, %FileStore.Error{...}}
+case FileStore.read(store, "bizcorp.jpg") do
+  {:ok, data}                         -> data
+  {:error, %FileStore.NotFound{}}     -> nil
+  {:error, %FileStore.PermissionDenied{}} -> reraise_as_403()
+  {:error, %FileStore.Network{}}      -> retry()
+  {:error, error}                     -> raise error
+end
 ```
 
-One of the following structs will be returned:
+Available error structs (all implement `Exception`, so you can `raise` them):
 
-- `FileStore.Error`
-- `FileStore.UploadError`
-- `FileStore.DownloadError`
-- `FileStore.CopyError`
-- `FileStore.RenameError`
-- `FileStore.PutAccessControlListError`
+- `FileStore.NotFound` — key does not exist (`:enoent`, HTTP 404, etc.)
+- `FileStore.PermissionDenied` — caller lacks access (`:eacces`, HTTP 403, etc.)
+- `FileStore.Conflict` — resource state conflicts (`:eisdir`, HTTP 409, etc.)
+- `FileStore.InvalidArgument` — bad input (`:invalid_tags`, HTTP 400, etc.)
+- `FileStore.Network` — transport failure (connection reset, HTTP 5xx, etc.)
+- `FileStore.Error` — catch-all for unclassified errors
 
-Because the error implements the `Exception` behaviour, you can `raise` it.
+Every struct carries `:reason` (the raw underlying cause), `:operation`, and relevant context fields (`:key`, `:src`, `:dest`, `:path`, `:tags`, `:acl`).
+
+**Retry on network failure:**
+
+```elixir
+def with_retries(fun, attempts \\ 3) do
+  case fun.() do
+    {:error, %FileStore.Network{}} when attempts > 1 ->
+      Process.sleep(backoff(attempts))
+      with_retries(fun, attempts - 1)
+    other ->
+      other
+  end
+end
+```
 
 #### Prefix
 

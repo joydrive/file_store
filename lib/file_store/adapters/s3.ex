@@ -44,6 +44,8 @@ if Code.ensure_loaded?(ExAws.S3) do
     end
 
     defimpl FileStore do
+      alias ExAws.S3.Upload
+      alias FileStore.Error.Classifier
       alias FileStore.Stat
       alias FileStore.Utils
 
@@ -94,14 +96,14 @@ if Code.ensure_loaded?(ExAws.S3) do
             {:ok, %Stat{key: key, etag: etag, size: size, type: type}}
 
           {:error, reason} ->
-            {:error, reason}
+            {:error, Classifier.classify(reason, operation: :stat, key: key)}
         end
       end
 
       def delete(store, key) do
         store.bucket
         |> ExAws.S3.delete_object(key)
-        |> acknowledge(store)
+        |> acknowledge(store, operation: :delete, key: key)
       end
 
       def delete_all(store, opts) do
@@ -110,12 +112,13 @@ if Code.ensure_loaded?(ExAws.S3) do
         if Enum.any?(keys) do
           store.bucket
           |> ExAws.S3.delete_all_objects(keys)
-          |> acknowledge(store)
+          |> acknowledge(store, operation: :delete_all, key: opts[:prefix])
         else
           :ok
         end
       rescue
-        error -> {:error, error}
+        error ->
+          {:error, Classifier.classify(error, operation: :delete_all, key: opts[:prefix])}
       end
 
       def write(store, key, content, opts \\ []) do
@@ -126,7 +129,7 @@ if Code.ensure_loaded?(ExAws.S3) do
 
         store.bucket
         |> ExAws.S3.put_object(key, content, opts)
-        |> acknowledge(store)
+        |> acknowledge(store, operation: :write, key: key)
       end
 
       def read(store, key) do
@@ -135,23 +138,24 @@ if Code.ensure_loaded?(ExAws.S3) do
         |> request(store)
         |> case do
           {:ok, %{body: body}} -> {:ok, body}
-          {:error, reason} -> {:error, reason}
+          {:error, reason} -> {:error, Classifier.classify(reason, operation: :read, key: key)}
         end
       end
 
       def upload(store, source, key) do
         source
-        |> ExAws.S3.Upload.stream_file()
+        |> Upload.stream_file()
         |> ExAws.S3.upload(store.bucket, key)
-        |> acknowledge(store)
+        |> acknowledge(store, operation: :upload, path: source, key: key)
       rescue
-        error in [File.Error] -> {:error, error.reason}
+        error in [File.Error] ->
+          {:error, Classifier.classify(error, operation: :upload, path: source, key: key)}
       end
 
       def download(store, key, destination) do
         store.bucket
         |> ExAws.S3.download_file(key, destination)
-        |> acknowledge(store)
+        |> acknowledge(store, operation: :download, key: key, path: destination)
       end
 
       def list!(store, opts) do
@@ -166,25 +170,29 @@ if Code.ensure_loaded?(ExAws.S3) do
       def copy(store, src, dest) do
         store.bucket
         |> ExAws.S3.put_object_copy(dest, store.bucket, src)
-        |> acknowledge(store)
+        |> acknowledge(store, operation: :copy, src: src, dest: dest)
       end
 
       def rename(store, src, dest) do
-        with :ok <- copy(store, src, dest) do
-          delete(store, src)
+        case copy(store, src, dest) do
+          :ok ->
+            delete(store, src)
+
+          {:error, %{reason: raw}} ->
+            {:error, Classifier.classify(raw, operation: :rename, src: src, dest: dest)}
         end
       end
 
       def put_access_control_list(store, key, acl) do
         store.bucket
         |> ExAws.S3.put_object_acl(key, acl)
-        |> acknowledge(store)
+        |> acknowledge(store, operation: :put_access_control_list, key: key, acl: acl)
       end
 
       def set_tags(store, key, tags) do
         store.bucket
         |> ExAws.S3.put_object_tagging(key, tags)
-        |> acknowledge(store)
+        |> acknowledge(store, operation: :set_tags, key: key, tags: tags)
       end
 
       def get_tags(store, key) do
@@ -201,7 +209,7 @@ if Code.ensure_loaded?(ExAws.S3) do
             {:ok, tags}
 
           {:error, reason} ->
-            {:error, reason}
+            {:error, Classifier.classify(reason, operation: :get_tags, key: key)}
         end
       end
 
@@ -209,10 +217,10 @@ if Code.ensure_loaded?(ExAws.S3) do
         ExAws.request(op, store.ex_aws)
       end
 
-      defp acknowledge(op, store) do
+      defp acknowledge(op, store, ctx) do
         case request(op, store) do
           {:ok, _} -> :ok
-          {:error, reason} -> {:error, reason}
+          {:error, reason} -> {:error, Classifier.classify(reason, ctx)}
         end
       end
 

@@ -129,16 +129,19 @@ defmodule FileStore.Adapters.DiskTest do
       :ok
     end
 
-    test "set_tags/3 returns enoent for implicit parent directory", %{store: store} do
-      assert {:error, :enoent} = FileStore.set_tags(store, "foo", [{"k", "v"}])
+    test "set_tags/3 returns not found for implicit parent directory", %{store: store} do
+      assert {:error, %FileStore.NotFound{operation: :set_tags, key: "foo"}} =
+               FileStore.set_tags(store, "foo", [{"k", "v"}])
     end
 
-    test "get_tags/2 returns enoent for implicit parent directory", %{store: store} do
-      assert {:error, :enoent} = FileStore.get_tags(store, "foo")
+    test "get_tags/2 returns not found for implicit parent directory", %{store: store} do
+      assert {:error, %FileStore.NotFound{operation: :get_tags, key: "foo"}} =
+               FileStore.get_tags(store, "foo")
     end
 
-    test "rename/2 returns enoent for implicit parent directory", %{store: store} do
-      assert {:error, :enoent} = FileStore.rename(store, "foo", "bar")
+    test "rename/2 returns not found for implicit parent directory", %{store: store} do
+      assert {:error, %FileStore.NotFound{operation: :rename, src: "foo", dest: "bar"}} =
+               FileStore.rename(store, "foo", "bar")
     end
 
     test "rename/2 does not move implicit parent directory subtree", %{store: store} do
@@ -148,28 +151,34 @@ defmodule FileStore.Adapters.DiskTest do
   end
 
   describe "get_tags/2 with corrupt tag files" do
-    test "returns error on invalid JSON", %{store: store, tmp: tmp} do
+    test "returns invalid argument on invalid JSON", %{store: store, tmp: tmp} do
       assert :ok = FileStore.write(store, "foo", "data")
       tags_path = Path.join([tmp, ".file_store_tags", "foo.json"])
       File.mkdir_p!(Path.dirname(tags_path))
       File.write!(tags_path, "not json")
-      assert {:error, :invalid_tags} = FileStore.get_tags(store, "foo")
+
+      assert {:error, %FileStore.InvalidArgument{operation: :get_tags, key: "foo", reason: :invalid_tags}} =
+               FileStore.get_tags(store, "foo")
     end
 
-    test "returns error when JSON is not a list", %{store: store, tmp: tmp} do
+    test "returns invalid argument when JSON is not a list", %{store: store, tmp: tmp} do
       assert :ok = FileStore.write(store, "foo", "data")
       tags_path = Path.join([tmp, ".file_store_tags", "foo.json"])
       File.mkdir_p!(Path.dirname(tags_path))
       File.write!(tags_path, ~s({"k": "v"}))
-      assert {:error, :invalid_tags} = FileStore.get_tags(store, "foo")
+
+      assert {:error, %FileStore.InvalidArgument{operation: :get_tags, key: "foo", reason: :invalid_tags}} =
+               FileStore.get_tags(store, "foo")
     end
 
-    test "returns error when a pair has wrong shape", %{store: store, tmp: tmp} do
+    test "returns invalid argument when a pair has wrong shape", %{store: store, tmp: tmp} do
       assert :ok = FileStore.write(store, "foo", "data")
       tags_path = Path.join([tmp, ".file_store_tags", "foo.json"])
       File.mkdir_p!(Path.dirname(tags_path))
       File.write!(tags_path, ~s([["k", 123]]))
-      assert {:error, :invalid_tags} = FileStore.get_tags(store, "foo")
+
+      assert {:error, %FileStore.InvalidArgument{operation: :get_tags, key: "foo", reason: :invalid_tags}} =
+               FileStore.get_tags(store, "foo")
     end
   end
 end
