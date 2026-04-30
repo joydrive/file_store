@@ -185,18 +185,10 @@ defmodule FileStore.Adapters.Disk do
       path = Disk.join(store, key)
 
       if File.exists?(path) do
-        tags_path = tags_path(store, key)
-
-        case File.read(tags_path) do
-          {:ok, data} ->
-            tags = data |> Jason.decode!() |> Enum.map(fn [k, v] -> {k, v} end)
-            {:ok, tags}
-
-          {:error, :enoent} ->
-            {:ok, []}
-
-          {:error, reason} ->
-            {:error, reason}
+        case File.read(tags_path(store, key)) do
+          {:ok, data} -> decode_tags(data)
+          {:error, :enoent} -> {:ok, []}
+          {:error, reason} -> {:error, reason}
         end
       else
         {:error, :enoent}
@@ -230,6 +222,27 @@ defmodule FileStore.Adapters.Disk do
 
     defp tags_path(store, key) do
       Path.join([store.storage_path, store.tags_dir, key <> ".json"])
+    end
+
+    defp decode_tags(data) do
+      case Jason.decode(data) do
+        {:ok, pairs} when is_list(pairs) -> decode_tag_pairs(pairs)
+        _ -> {:error, :invalid_tags}
+      end
+    end
+
+    defp decode_tag_pairs(pairs) do
+      Enum.reduce_while(pairs, {:ok, []}, fn
+        [k, v], {:ok, acc} when is_binary(k) and is_binary(v) ->
+          {:cont, {:ok, [{k, v} | acc]}}
+
+        _, _ ->
+          {:halt, {:error, :invalid_tags}}
+      end)
+      |> case do
+        {:ok, tags} -> {:ok, Enum.reverse(tags)}
+        error -> error
+      end
     end
 
     defp expand(store, key) do

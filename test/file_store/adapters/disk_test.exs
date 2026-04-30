@@ -104,4 +104,30 @@ defmodule FileStore.Adapters.DiskTest do
       assert {:ok, []} = FileStore.get_tags(store, "dest")
     end
   end
+
+  describe "get_tags/2 with corrupt tag files" do
+    test "returns error on invalid JSON", %{store: store, tmp: tmp} do
+      assert :ok = FileStore.write(store, "foo", "data")
+      tags_path = Path.join([tmp, ".file_store_tags", "foo.json"])
+      File.mkdir_p!(Path.dirname(tags_path))
+      File.write!(tags_path, "not json")
+      assert {:error, :invalid_tags} = FileStore.get_tags(store, "foo")
+    end
+
+    test "returns error when JSON is not a list", %{store: store, tmp: tmp} do
+      assert :ok = FileStore.write(store, "foo", "data")
+      tags_path = Path.join([tmp, ".file_store_tags", "foo.json"])
+      File.mkdir_p!(Path.dirname(tags_path))
+      File.write!(tags_path, ~s({"k": "v"}))
+      assert {:error, :invalid_tags} = FileStore.get_tags(store, "foo")
+    end
+
+    test "returns error when a pair has wrong shape", %{store: store, tmp: tmp} do
+      assert :ok = FileStore.write(store, "foo", "data")
+      tags_path = Path.join([tmp, ".file_store_tags", "foo.json"])
+      File.mkdir_p!(Path.dirname(tags_path))
+      File.write!(tags_path, ~s([["k", 123]]))
+      assert {:error, :invalid_tags} = FileStore.get_tags(store, "foo")
+    end
+  end
 end
