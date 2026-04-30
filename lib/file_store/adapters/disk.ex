@@ -216,7 +216,7 @@ defmodule FileStore.Adapters.Disk do
       |> Path.join("**/*")
       |> Path.wildcard(match_dot: true)
       |> Stream.reject(&File.dir?/1)
-      |> Stream.reject(&String.starts_with?(&1, tags_dir))
+      |> Stream.reject(&String.starts_with?(&1, tags_dir <> "/"))
       |> Stream.map(&Path.relative_to(&1, store.storage_path))
     end
 

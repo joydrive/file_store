@@ -33,6 +33,12 @@ defmodule FileStore.Adapters.DiskTest do
     assert {:ok, [{"k", "v"}]} = FileStore.get_tags(store, "foo")
   end
 
+  test "list!/2 includes keys whose path starts with tags_dir name", %{store: store} do
+    assert :ok = FileStore.write(store, ".file_store_tags_backup/foo", "data")
+    keys = Enum.to_list(FileStore.list!(store))
+    assert ".file_store_tags_backup/foo" in keys
+  end
+
   describe "tag lifecycle" do
     test "write/4 clears stale tags on overwrite", %{store: store} do
       assert :ok = FileStore.write(store, "foo", "v1")
