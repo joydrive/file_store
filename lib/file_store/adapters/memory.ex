@@ -47,7 +47,7 @@ defmodule FileStore.Adapters.Memory do
 
   defmodule Object do
     @moduledoc false
-    defstruct [:content, tags: %{}]
+    defstruct [:content, tags: []]
   end
 
   @doc "Creates a new memory adapter"
@@ -72,6 +72,8 @@ defmodule FileStore.Adapters.Memory do
   end
 
   defimpl FileStore do
+    alias FileStore.Adapters.Memory.Object
+    alias FileStore.Error.Classifier
     alias FileStore.Stat
     alias FileStore.Utils
 
@@ -107,6 +109,7 @@ defmodule FileStore.Adapters.Memory do
         :error ->
           {:error, :enoent}
       end
+      |> wrap_error(operation: :stat, key: key)
     end
 
     def delete(store, key) do
@@ -134,6 +137,7 @@ defmodule FileStore.Adapters.Memory do
           :error -> {:error, :enoent}
         end
       end)
+      |> wrap_error(operation: :read, key: key)
     end
 
     def copy(store, src, dest) do
@@ -146,6 +150,7 @@ defmodule FileStore.Adapters.Memory do
             {{:error, :enoent}, state}
         end
       end)
+      |> wrap_error(operation: :copy, src: src, dest: dest)
     end
 
     def rename(store, src, dest) do
@@ -158,6 +163,7 @@ defmodule FileStore.Adapters.Memory do
             {{:error, :enoent}, state}
         end
       end)
+      |> wrap_error(operation: :rename, src: src, dest: dest)
     end
 
     def put_access_control_list(_store, _key, _acl), do: :ok
@@ -165,14 +171,14 @@ defmodule FileStore.Adapters.Memory do
     def set_tags(store, key, tags) do
       Agent.get_and_update(store.name, fn state ->
         case Map.fetch(state, key) do
-          {:ok, %Object{content: content, tags: _old_tags}} ->
-            updated_object = %Object{content: content, tags: tags}
-            {:ok, Map.put(state, key, updated_object)}
+          {:ok, %Object{content: content}} ->
+            {:ok, Map.put(state, key, %Object{content: content, tags: tags})}
 
           :error ->
             {{:error, :enoent}, state}
         end
       end)
+      |> wrap_error(operation: :set_tags, key: key, tags: tags)
     end
 
     def get_tags(store, key) do
@@ -185,18 +191,24 @@ defmodule FileStore.Adapters.Memory do
             {:error, :enoent}
         end
       end)
+      |> wrap_error(operation: :get_tags, key: key)
     end
 
     def upload(store, source, key) do
       with {:ok, data} <- File.read(source) do
         write(store, key, data)
       end
+      |> wrap_error(operation: :upload, path: source, key: key)
     end
 
     def download(store, key, destination) do
-      with {:ok, data} <- read(store, key) do
-        File.write(destination, data)
+      store.name
+      |> Agent.get(&Map.fetch(&1, key))
+      |> case do
+        {:ok, %Object{content: content}} -> File.write(destination, content)
+        :error -> {:error, :enoent}
       end
+      |> wrap_error(operation: :download, key: key, path: destination)
     end
 
     def list!(store, opts) do
@@ -206,5 +218,9 @@ defmodule FileStore.Adapters.Memory do
       |> Agent.get(&Map.keys/1)
       |> Stream.filter(&String.starts_with?(&1, prefix))
     end
+
+    defp wrap_error(:ok, _ctx), do: :ok
+    defp wrap_error({:ok, _} = ok, _ctx), do: ok
+    defp wrap_error({:error, reason}, ctx), do: {:error, Classifier.classify(reason, ctx)}
   end
 end

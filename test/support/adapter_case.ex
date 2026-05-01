@@ -38,7 +38,8 @@ defmodule FileStore.AdapterCase do
         end
 
         test "errors when file does not exist", %{store: store} do
-          assert {:error, _} = FileStore.read(store, "does-not-exist")
+          assert {:error, %FileStore.NotFound{operation: :read}} =
+                   FileStore.read(store, "does-not-exist")
         end
       end
 
@@ -62,7 +63,8 @@ defmodule FileStore.AdapterCase do
         end
 
         test "fails when the source file is missing", %{store: store} do
-          assert {:error, _} = FileStore.upload(store, "doesnotexist.txt", "foo")
+          assert {:error, %FileStore.NotFound{operation: :upload}} =
+                   FileStore.upload(store, "doesnotexist.txt", "foo")
         end
       end
 
@@ -86,7 +88,8 @@ defmodule FileStore.AdapterCase do
         end
 
         test "fails when the file is missing", %{store: store} do
-          assert {:error, _} = FileStore.stat(store, "completegarbage")
+          assert {:error, %FileStore.NotFound{operation: :stat}} =
+                   FileStore.stat(store, "completegarbage")
         end
       end
 
@@ -107,8 +110,8 @@ defmodule FileStore.AdapterCase do
           assert :ok = FileStore.write(store, "foo", "")
           assert :ok = FileStore.write(store, "bar/buzz", "")
           assert :ok = FileStore.delete_all(store)
-          assert {:error, _} = FileStore.stat(store, "foo")
-          assert {:error, _} = FileStore.stat(store, "bar/buzz")
+          assert {:error, %FileStore.NotFound{}} = FileStore.stat(store, "foo")
+          assert {:error, %FileStore.NotFound{}} = FileStore.stat(store, "bar/buzz")
         end
 
         test "deletes files under prefix", %{store: store} do
@@ -117,8 +120,8 @@ defmodule FileStore.AdapterCase do
           assert :ok = FileStore.write(store, "bar/baz", "")
           assert :ok = FileStore.delete_all(store, prefix: "bar")
           assert {:ok, _} = FileStore.stat(store, "foo")
-          assert {:error, _} = FileStore.stat(store, "bar/buzz")
-          assert {:error, _} = FileStore.stat(store, "bar/baz")
+          assert {:error, %FileStore.NotFound{}} = FileStore.stat(store, "bar/buzz")
+          assert {:error, %FileStore.NotFound{}} = FileStore.stat(store, "bar/baz")
         end
 
         test "indicates success for non-existent keys", %{store: store} do
@@ -172,8 +175,10 @@ defmodule FileStore.AdapterCase do
         end
 
         test "fails to copy a non existing file", %{store: store} do
-          assert {:error, _} = FileStore.copy(store, "foo", "bar")
-          assert {:error, _} = FileStore.stat(store, "bar")
+          assert {:error, %FileStore.NotFound{operation: :copy}} =
+                   FileStore.copy(store, "foo", "bar")
+
+          assert {:error, %FileStore.NotFound{}} = FileStore.stat(store, "bar")
         end
 
         test "copy replaces existing file", %{store: store} do
@@ -195,8 +200,10 @@ defmodule FileStore.AdapterCase do
         end
 
         test "fails to rename a non existing file", %{store: store} do
-          assert {:error, _} = FileStore.rename(store, "foo", "bar")
-          assert {:error, _} = FileStore.stat(store, "bar")
+          assert {:error, %FileStore.NotFound{operation: :rename}} =
+                   FileStore.rename(store, "foo", "bar")
+
+          assert {:error, %FileStore.NotFound{}} = FileStore.stat(store, "bar")
         end
 
         test "rename replaces existing file", %{store: store} do
@@ -214,6 +221,28 @@ defmodule FileStore.AdapterCase do
           :ok = FileStore.write(store, "foo", "test")
 
           assert :ok = FileStore.put_access_control_list(store, "foo", [{:acl, :private}])
+        end
+      end
+
+      describe "set_tags/3 and get_tags/2 conformance" do
+        test "sets and retrieves tags", %{store: store} do
+          tags = [{"env", "prod"}, {"team", "platform"}]
+          assert :ok = FileStore.write(store, "foo", "bar")
+          assert :ok = FileStore.set_tags(store, "foo", tags)
+          assert {:ok, returned} = FileStore.get_tags(store, "foo")
+          assert Enum.sort(returned) == Enum.sort(tags)
+        end
+
+        test "returns empty tags when none set", %{store: store} do
+          assert :ok = FileStore.write(store, "foo", "bar")
+          assert {:ok, []} = FileStore.get_tags(store, "foo")
+        end
+
+        test "tags not included in list!", %{store: store} do
+          assert :ok = FileStore.write(store, "foo", "bar")
+          assert :ok = FileStore.set_tags(store, "foo", [{"k", "v"}])
+          keys = Enum.to_list(FileStore.list!(store))
+          assert keys == ["foo"]
         end
       end
     end

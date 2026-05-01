@@ -10,6 +10,9 @@ defmodule FileStore.Adapters.Disk do
     * `base_url` - The base URL that should be used for
        generating URLs to your files.
 
+    * `tags_dir` - The directory name (relative to `storage_path`) used
+      to store tag files. Defaults to `".file_store_tags"`.
+
   ### Example
 
       iex> store = FileStore.Adapters.Disk.new(
@@ -27,7 +30,7 @@ defmodule FileStore.Adapters.Disk do
   """
 
   @enforce_keys [:storage_path, :base_url]
-  defstruct [:storage_path, :base_url]
+  defstruct [:storage_path, :base_url, tags_dir: ".file_store_tags"]
 
   @doc "Create a new disk adapter"
   @spec new(keyword) :: FileStore.t()
@@ -50,9 +53,10 @@ defmodule FileStore.Adapters.Disk do
   end
 
   defimpl FileStore do
+    alias FileStore.Adapters.Disk
+    alias FileStore.Error.Classifier
     alias FileStore.Stat
     alias FileStore.Utils
-    alias FileStore.Adapters.Disk
 
     def get_public_url(store, key, opts) do
       query = Keyword.take(opts, [:content_type, :disposition])
@@ -82,77 +86,191 @@ defmodule FileStore.Adapters.Disk do
           }
         }
       end
+      |> wrap_error(operation: :stat, key: key)
     end
 
     def delete(store, key) do
       case File.rm(Disk.join(store, key)) do
-        :ok -> :ok
-        {:error, reason} when reason in [:enoent, :enotdir] -> :ok
-        {:error, reason} -> {:error, reason}
+        {:error, reason} when reason not in [:enoent, :enotdir] ->
+          {:error, Classifier.classify(reason, operation: :delete, key: key)}
+
+        _ ->
+          _ = File.rm(tags_path(store, key))
+          :ok
       end
     end
 
     def delete_all(store, opts) do
       prefix = Keyword.get(opts, :prefix, "")
+      tags_subtree = Path.join([store.storage_path, store.tags_dir, prefix])
 
-      store.storage_path
-      |> Path.join(prefix)
-      |> File.rm_rf()
-      |> case do
-        {:ok, _} -> :ok
-        {:error, reason, _file} -> {:error, reason}
+      with {:ok, _} <- store.storage_path |> Path.join(prefix) |> File.rm_rf(),
+           {:ok, _} <-
+             if(File.dir?(tags_subtree), do: File.rm_rf(tags_subtree), else: {:ok, []}),
+           {:ok, _} <- File.rm_rf(tags_subtree <> ".json") do
+        :ok
+      else
+        {:error, reason, file} ->
+          {:error, Classifier.classify(reason, operation: :delete_all, key: file)}
       end
     end
 
     def write(store, key, content, _opts \\ []) do
       with {:ok, path} <- expand(store, key) do
+        _ = File.rm(tags_path(store, key))
         File.write(path, content)
       end
+      |> wrap_error(operation: :write, key: key)
     end
 
     def read(store, key) do
-      store |> Disk.join(key) |> File.read()
+      store |> Disk.join(key) |> File.read() |> wrap_error(operation: :read, key: key)
     end
 
     def copy(store, src, dest) do
-      with {:ok, src} <- expand(store, src),
-           {:ok, dest} <- expand(store, dest),
-           {:ok, _} <- File.copy(src, dest),
-           do: :ok
+      result =
+        with {:ok, src_path} <- expand(store, src),
+             {:ok, dest_path} <- expand(store, dest),
+             {:ok, _} <- File.copy(src_path, dest_path) do
+          copy_tags(store, src, dest)
+        end
+
+      wrap_error(result, operation: :copy, src: src, dest: dest)
+    end
+
+    defp copy_tags(store, src, dest) do
+      src_tags = tags_path(store, src)
+      dest_tags = tags_path(store, dest)
+
+      if File.exists?(src_tags) do
+        with :ok <- File.mkdir_p(Path.dirname(dest_tags)),
+             {:ok, _} <- File.copy(src_tags, dest_tags),
+             do: :ok
+      else
+        _ = File.rm(dest_tags)
+        :ok
+      end
     end
 
     def rename(store, src, dest) do
-      with {:ok, src} <- expand(store, src),
-           {:ok, dest} <- expand(store, dest),
-           do: File.rename(src, dest)
+      src_path = Disk.join(store, src)
+
+      if File.regular?(src_path) do
+        with {:ok, dest_path} <- expand(store, dest),
+             :ok <- File.rename(src_path, dest_path),
+             do: rename_tags(store, src, dest)
+      else
+        {:error, :enoent}
+      end
+      |> wrap_error(operation: :rename, src: src, dest: dest)
+    end
+
+    defp rename_tags(store, src, dest) do
+      src_tags = tags_path(store, src)
+      dest_tags = tags_path(store, dest)
+
+      if File.exists?(src_tags) do
+        with :ok <- File.mkdir_p(Path.dirname(dest_tags)),
+             do: File.rename(src_tags, dest_tags)
+      else
+        _ = File.rm(dest_tags)
+        :ok
+      end
     end
 
     def put_access_control_list(_store, _key, _acl), do: :ok
 
-    def set_tags(_store, _key, _tags), do: :ok
-    def get_tags(_store, _key), do: []
+    def set_tags(store, key, tags) do
+      path = Disk.join(store, key)
+
+      result =
+        if File.regular?(path) do
+          tags_path = tags_path(store, key)
+          tags_dir = Path.dirname(tags_path)
+
+          with :ok <- File.mkdir_p(tags_dir) do
+            File.write(tags_path, Jason.encode!(Enum.map(tags, &Tuple.to_list/1)))
+          end
+        else
+          {:error, :enoent}
+        end
+
+      wrap_error(result, operation: :set_tags, key: key, tags: tags)
+    end
+
+    def get_tags(store, key) do
+      path = Disk.join(store, key)
+
+      result =
+        if File.regular?(path) do
+          case File.read(tags_path(store, key)) do
+            {:ok, data} -> decode_tags(data)
+            {:error, :enoent} -> {:ok, []}
+            {:error, reason} -> {:error, reason}
+          end
+        else
+          {:error, :enoent}
+        end
+
+      wrap_error(result, operation: :get_tags, key: key)
+    end
 
     def upload(store, source, key) do
-      with {:ok, dest} <- expand(store, key),
-           {:ok, _} <- File.copy(source, dest),
-           do: :ok
+      result =
+        with {:ok, dest} <- expand(store, key),
+             {:ok, _} <- File.copy(source, dest) do
+          :ok
+        end
+
+      wrap_error(result, operation: :upload, path: source, key: key)
     end
 
     def download(store, key, dest) do
-      with {:ok, source} <- expand(store, key),
-           {:ok, _} <- File.copy(source, dest),
-           do: :ok
+      result =
+        with {:ok, source} <- expand(store, key),
+             {:ok, _} <- File.copy(source, dest) do
+          :ok
+        end
+
+      wrap_error(result, operation: :download, key: key, path: dest)
     end
 
     def list!(store, opts) do
       prefix = Keyword.get(opts, :prefix, "")
+      tags_dir = Path.join(store.storage_path, store.tags_dir)
 
       store.storage_path
       |> Path.join(prefix)
       |> Path.join("**/*")
       |> Path.wildcard(match_dot: true)
       |> Stream.reject(&File.dir?/1)
+      |> Stream.reject(&String.starts_with?(&1, tags_dir <> "/"))
       |> Stream.map(&Path.relative_to(&1, store.storage_path))
+    end
+
+    defp tags_path(store, key) do
+      Path.join([store.storage_path, store.tags_dir, key <> ".json"])
+    end
+
+    defp decode_tags(data) do
+      case Jason.decode(data) do
+        {:ok, pairs} when is_list(pairs) -> decode_tag_pairs(pairs)
+        _ -> {:error, :invalid_tags}
+      end
+    end
+
+    defp decode_tag_pairs(pairs) do
+      Enum.reduce_while(pairs, {:ok, []}, fn
+        [k, v], {:ok, acc} when is_binary(k) and is_binary(v) ->
+          {:cont, {:ok, [{k, v} | acc]}}
+
+        _, _ ->
+          {:halt, {:error, :invalid_tags}}
+      end)
+      |> case do
+        {:ok, tags} -> {:ok, Enum.reverse(tags)}
+        error -> error
+      end
     end
 
     defp expand(store, key) do
@@ -161,5 +279,9 @@ defmodule FileStore.Adapters.Disk do
            :ok <- File.mkdir_p(dir),
            do: {:ok, path}
     end
+
+    defp wrap_error(:ok, _ctx), do: :ok
+    defp wrap_error({:ok, _} = ok, _ctx), do: ok
+    defp wrap_error({:error, reason}, ctx), do: {:error, Classifier.classify(reason, ctx)}
   end
 end

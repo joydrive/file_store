@@ -1,27 +1,27 @@
 defmodule FileStore.Adapters.Error do
   @moduledoc false
 
-  defstruct []
+  defstruct reason: :boom
 
-  def new do
-    %__MODULE__{}
+  def new(opts \\ []) do
+    struct(__MODULE__, opts)
   end
 
   defimpl FileStore do
-    def write(_store, _key, _content, _opts \\ []), do: {:error, :boom}
-    def read(_store, _key), do: {:error, :boom}
-    def upload(_store, _source, _key), do: {:error, :boom}
-    def download(_store, _key, _destination), do: {:error, :boom}
-    def stat(_store, _key), do: {:error, :boom}
-    def delete(_store, _key), do: {:error, :boom}
-    def delete_all(_store, _opts \\ []), do: {:error, :boom}
-    def copy(_store, _src, _dest), do: {:error, :boom}
-    def rename(_store, _src, _dest), do: {:error, :boom}
-    def put_access_control_list(_store, _key, _acl), do: {:error, :boom}
-    def set_tags(_store, _key, _tags), do: {:error, :boom}
-    def get_tags(_store, _key), do: {:error, :boom}
+    def write(store, _key, _content, _opts \\ []), do: {:error, store.reason}
+    def read(store, _key), do: {:error, store.reason}
+    def upload(store, _source, _key), do: {:error, store.reason}
+    def download(store, _key, _destination), do: {:error, store.reason}
+    def stat(store, _key), do: {:error, store.reason}
+    def delete(store, _key), do: {:error, store.reason}
+    def delete_all(store, _opts \\ []), do: {:error, store.reason}
+    def copy(store, _src, _dest), do: {:error, store.reason}
+    def rename(store, _src, _dest), do: {:error, store.reason}
+    def put_access_control_list(store, _key, _acl), do: {:error, store.reason}
+    def set_tags(store, _key, _tags), do: {:error, store.reason}
+    def get_tags(store, _key), do: {:error, store.reason}
     def get_public_url(_store, key, _opts \\ []), do: key
-    def get_signed_url(_store, _key, _opts \\ []), do: {:error, :boom}
+    def get_signed_url(store, _key, _opts \\ []), do: {:error, store.reason}
     def list!(_store, _opts \\ []), do: []
   end
 end

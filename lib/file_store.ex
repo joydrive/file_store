@@ -20,6 +20,15 @@ defprotocol FileStore do
   @type list_opts :: [{:prefix, binary()}]
   @type delete_all_opts :: [{:prefix, binary()}]
   @type acl_list :: [term()]
+  @type tags :: [{binary(), binary()}]
+
+  @type error ::
+          %FileStore.NotFound{}
+          | %FileStore.PermissionDenied{}
+          | %FileStore.Conflict{}
+          | %FileStore.InvalidArgument{}
+          | %FileStore.Network{}
+          | %FileStore.Error{}
 
   @type write_opts :: [
           {:content_type, binary()}
@@ -52,7 +61,7 @@ defprotocol FileStore do
       :ok
 
   """
-  @spec write(t, key, binary, write_opts) :: :ok | {:error, term}
+  @spec write(t, key, binary, write_opts) :: :ok | {:error, error}
   def write(store, key, content, opts \\ [])
 
   @doc """
@@ -64,7 +73,7 @@ defprotocol FileStore do
       {:ok, "hello world"}
 
   """
-  @spec read(t, key) :: {:ok, binary} | {:error, term}
+  @spec read(t, key) :: {:ok, binary} | {:error, error}
   def read(store, key)
 
   @doc """
@@ -77,7 +86,7 @@ defprotocol FileStore do
       :ok
 
   """
-  @spec upload(t, Path.t(), key) :: :ok | {:error, term}
+  @spec upload(t, Path.t(), key) :: :ok | {:error, error}
   def upload(store, source, key)
 
   @doc """
@@ -89,7 +98,7 @@ defprotocol FileStore do
       :ok
 
   """
-  @spec download(t, key, Path.t()) :: :ok | {:error, term}
+  @spec download(t, key, Path.t()) :: :ok | {:error, error}
   def download(store, key, destination)
 
   @doc """
@@ -101,7 +110,7 @@ defprotocol FileStore do
       {:ok, %FileStore.Stat{key: "foo", etag: "2e5pd429", size: 24}}
 
   """
-  @spec stat(t, key) :: {:ok, FileStore.Stat.t()} | {:error, term}
+  @spec stat(t, key) :: {:ok, FileStore.Stat.t()} | {:error, error}
   def stat(store, key)
 
   @doc """
@@ -113,7 +122,7 @@ defprotocol FileStore do
     :ok
 
   """
-  @spec delete(t, key) :: :ok | {:error, term}
+  @spec delete(t, key) :: :ok | {:error, error}
   def delete(store, key)
 
   @doc """
@@ -132,7 +141,7 @@ defprotocol FileStore do
     :ok
 
   """
-  @spec delete_all(t, delete_all_opts) :: :ok | {:error, term}
+  @spec delete_all(t, delete_all_opts) :: :ok | {:error, error}
   def delete_all(store, opts \\ [])
 
   @doc """
@@ -144,7 +153,7 @@ defprotocol FileStore do
       :ok
 
   """
-  @spec copy(t(), key(), key()) :: :ok | {:error, term()}
+  @spec copy(t(), key(), key()) :: :ok | {:error, error()}
   def copy(store, src, dest)
 
   @doc """
@@ -158,7 +167,7 @@ defprotocol FileStore do
       :ok
 
   """
-  @spec rename(t(), key(), key()) :: :ok | {:error, term()}
+  @spec rename(t(), key(), key()) :: :ok | {:error, error()}
   def rename(store, src, dest)
 
   @doc """
@@ -194,7 +203,7 @@ defprotocol FileStore do
       {:ok, "https://s3.amazonaws.com/mybucket/foo?X-AMZ-Expires=3600&..."}
 
   """
-  @spec get_signed_url(t, key, signed_url_opts) :: {:ok, binary} | {:error, term}
+  @spec get_signed_url(t, key, signed_url_opts) :: {:ok, binary} | {:error, error}
   def get_signed_url(store, key, opts \\ [])
 
   @doc """
@@ -230,9 +239,30 @@ defprotocol FileStore do
       :ok
 
   """
-  @spec put_access_control_list(t, key(), acl_list()) :: :ok | {:error, term}
+  @spec put_access_control_list(t, key(), acl_list()) :: :ok | {:error, error}
   def put_access_control_list(store, key, acl)
 
+  @doc """
+  Set tags (key-value pairs) on a file in the store.
+
+  ## Examples
+
+      iex> FileStore.set_tags(store, "foo", [{"env", "prod"}])
+      :ok
+
+  """
+  @spec set_tags(t, key, tags) :: :ok | {:error, error}
   def set_tags(store, key, tags)
+
+  @doc """
+  Get tags associated with a file in the store.
+
+  ## Examples
+
+      iex> FileStore.get_tags(store, "foo")
+      {:ok, [{"env", "prod"}]}
+
+  """
+  @spec get_tags(t, key) :: {:ok, tags} | {:error, error}
   def get_tags(store, key)
 end

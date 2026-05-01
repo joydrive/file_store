@@ -3,13 +3,15 @@ defmodule FileStore.Middleware.LoggerTest do
   import ExUnit.CaptureLog
   require Logger
 
+  alias FileStore.Adapters.Memory
+
   @config [base_url: "http://localhost:4000"]
 
   setup :silence_logger
 
   setup do
-    start_supervised!(FileStore.Adapters.Memory)
-    store = FileStore.Adapters.Memory.new(@config)
+    start_supervised!(Memory)
+    store = Memory.new(@config)
     store = FileStore.Middleware.Logger.new(store)
     {:ok, store: store}
   end
@@ -23,7 +25,8 @@ defmodule FileStore.Middleware.LoggerTest do
   test "logs a failed read", %{store: store} do
     Logger.configure(level: :debug)
     out = capture_log(fn -> FileStore.read(store, "none") end)
-    assert out =~ ~r/READ ERROR key="none" error=:enoent/
+    assert out =~ ~r/READ ERROR key="none"/
+    assert out =~ "FileStore.NotFound"
   end
 
   defp silence_logger(_) do
