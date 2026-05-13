@@ -105,14 +105,16 @@ if Code.ensure_loaded?(ExAws.S3) do
       end
 
       def delete_all(store, opts) do
-        keys = list!(store, opts)
+        # Materialize the list of keys so the underlying stream is only
+        # enumerated once.
+        case Enum.to_list(list!(store, opts)) do
+          [] ->
+            :ok
 
-        if Enum.any?(keys) do
-          store.bucket
-          |> ExAws.S3.delete_all_objects(keys)
-          |> acknowledge(store, operation: :delete_all, key: opts[:prefix])
-        else
-          :ok
+          keys ->
+            store.bucket
+            |> ExAws.S3.delete_all_objects(keys)
+            |> acknowledge(store, operation: :delete_all, key: opts[:prefix])
         end
       rescue
         error ->
